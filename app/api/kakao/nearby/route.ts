@@ -38,6 +38,8 @@ function mapCategory(kakaoCategory: string): string {
     if (parts[2]?.includes("디저트") || parts[2]?.includes("베이커리") || parts[2]?.includes("도넛") || parts[2]?.includes("아이스크림")) return "디저트";
     return "카페";
   }
+  if (second.includes("제과") || second.includes("베이커리") || second.includes("도넛") || second.includes("아이스크림")) return "디저트";
+  if (second.includes("아시아") || second.includes("베트남") || second.includes("태국") || second.includes("인도") || second.includes("멕시코")) return "양식";
   if (second.includes("주점") || second.includes("술집") || second.includes("호프") || second.includes("이자카야") || second.includes("바")) return "술집";
   return "기타";
 }
