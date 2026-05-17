@@ -153,22 +153,28 @@ export async function generateGroundedJSON<T>(
       ?.map((p) => p.text ?? "")
       .join("") ?? "";
 
-  // Extract JSON from text (model may wrap in ```json...``` or output raw JSON)
-  let jsonStr = text.trim();
-  const fenced = jsonStr.match(/```(?:json)?\s*([\s\S]+?)\s*```/);
-  if (fenced) jsonStr = fenced[1];
-  else {
-    // Find first { ... last } heuristic
-    const start = jsonStr.indexOf("{");
-    const end = jsonStr.lastIndexOf("}");
-    if (start >= 0 && end > start) jsonStr = jsonStr.slice(start, end + 1);
+  // Extract JSON: prefer the LAST complete fenced block (model may emit multiple).
+  let parsed: T | null = null;
+  const fencedAll = [...text.matchAll(/```(?:json)?\s*([\s\S]+?)\s*```/g)];
+  const candidates: string[] = fencedAll.map((m) => m[1]);
+  // Fallback: try {...} substrings
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start >= 0 && end > start) candidates.push(text.slice(start, end + 1));
+
+  // Try from longest to shortest until one parses
+  candidates.sort((a, b) => b.length - a.length);
+  for (const c of candidates) {
+    try {
+      parsed = JSON.parse(c) as T;
+      break;
+    } catch {
+      // continue
+    }
   }
 
-  let parsed: T;
-  try {
-    parsed = JSON.parse(jsonStr) as T;
-  } catch {
-    throw new Error("Gemini returned invalid JSON: " + text.slice(0, 200));
+  if (parsed === null) {
+    throw new Error("Gemini returned invalid JSON: " + text.slice(0, 300));
   }
 
   const sources = (raw.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [])
