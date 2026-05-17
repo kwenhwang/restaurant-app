@@ -82,7 +82,7 @@ export default function FindMenuButton({ restaurantId, saveMenu }: Props) {
     return (
       <button
         type="button"
-        onClick={find}
+        onClick={() => find()}
         className="w-full rounded-2xl py-3 text-[14px] font-semibold flex items-center justify-center gap-1.5"
         style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
       >
