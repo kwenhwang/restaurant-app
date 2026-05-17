@@ -1,20 +1,66 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 interface Props {
-  submit: (input: { message: string; url?: string; userAgent?: string }) => Promise<void>;
+  submit: (formData: FormData) => Promise<void>;
 }
 
 export default function BugReportButton({ submit }: Props) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  // Paste image directly from clipboard while modal is open
+  useEffect(() => {
+    if (!open) return;
+    function onPaste(e: ClipboardEvent) {
+      const item = [...(e.clipboardData?.items ?? [])].find((i) => i.type.startsWith("image/"));
+      if (!item) return;
+      const f = item.getAsFile();
+      if (f) attachFile(f);
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  function attachFile(f: File) {
+    if (!f.type.startsWith("image/")) {
+      setError("이미지 파일만 첨부 가능해요");
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setError("이미지가 너무 커요 (최대 5MB)");
+      return;
+    }
+    setError(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(f);
+    setPreviewUrl(URL.createObjectURL(f));
+  }
+
+  function removeFile() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setPreviewUrl(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
 
   function reset() {
     setMessage("");
+    removeFile();
     setDone(false);
     setError(null);
   }
@@ -33,11 +79,12 @@ export default function BugReportButton({ submit }: Props) {
     setError(null);
     startTransition(async () => {
       try {
-        await submit({
-          message,
-          url: typeof window !== "undefined" ? window.location.href : undefined,
-          userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
-        });
+        const fd = new FormData();
+        fd.append("message", message);
+        fd.append("url", window.location.href);
+        fd.append("userAgent", navigator.userAgent);
+        if (file) fd.append("file", file);
+        await submit(fd);
         setDone(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : "전송 실패");
@@ -76,7 +123,7 @@ export default function BugReportButton({ submit }: Props) {
           onClick={close}
         >
           <div
-            className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3"
+            className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3 max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -123,8 +170,62 @@ export default function BugReportButton({ submit }: Props) {
                   className="w-full rounded-2xl p-3 text-[14px] outline-none resize-none"
                   style={{ background: "var(--bg)", color: "var(--text)" }}
                 />
+
+                {/* Screenshot upload area */}
+                {previewUrl ? (
+                  <div
+                    className="relative rounded-2xl overflow-hidden"
+                    style={{ background: "var(--bg)" }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrl}
+                      alt="첨부 미리보기"
+                      className="w-full max-h-[240px] object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeFile}
+                      aria-label="첨부 제거"
+                      className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-white"
+                      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
+                    >
+                      ×
+                    </button>
+                    <div
+                      className="absolute bottom-2 left-2 px-2 py-1 rounded-full text-[11px] font-semibold text-white"
+                      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
+                    >
+                      {file ? `${(file.size / 1024).toFixed(0)} KB · ${file.name.slice(0, 24)}` : "첨부됨"}
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => inputRef.current?.click()}
+                    className="w-full rounded-2xl py-3 text-[13px] font-semibold flex items-center justify-center gap-1.5"
+                    style={{ background: "var(--bg)", color: "var(--text-2)" }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    스크린샷 첨부 (선택)
+                  </button>
+                )}
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) attachFile(f);
+                  }}
+                  className="hidden"
+                />
+
                 <div className="flex items-center justify-between text-[11px]" style={{ color: "var(--text-2)" }}>
-                  <span>현재 페이지 주소와 기기 정보가 함께 전송돼요</span>
+                  <span>주소·기기 정보가 함께 전송돼요</span>
                   <span>{message.length}/2000</span>
                 </div>
                 {error && (
