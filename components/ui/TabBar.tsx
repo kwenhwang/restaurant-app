@@ -45,9 +45,11 @@ export default function TabBar() {
       </Link>
 
       <nav
-        className="fixed left-3 right-3 bottom-6 h-16 rounded-[28px] z-30 glass"
+        className="fixed left-3 right-3 bottom-6 h-16 rounded-[28px] z-30"
         style={{
-          boxShadow: "0 8px 28px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)",
+          background: "var(--surface)",
+          boxShadow:
+            "0 8px 28px rgba(0,0,0,0.14), 0 1px 2px rgba(0,0,0,0.06), 0 0 0 0.5px rgba(0,0,0,0.06)",
           maxWidth: 640,
           marginInline: "auto",
         }}
