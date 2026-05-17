@@ -34,5 +34,38 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "share_target": {
+    "action": "/share-receive",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "shortcuts": [
+    {
+      "name": "빠른 등록",
+      "short_name": "기록",
+      "description": "사진 + 위치로 맛집 빠르게 등록",
+      "url": "/capture",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "지도",
+      "short_name": "지도",
+      "description": "내 맛집 지도 보기",
+      "url": "/map",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "방문 기록",
+      "short_name": "기록함",
+      "description": "최근 방문 보기",
+      "url": "/visits",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

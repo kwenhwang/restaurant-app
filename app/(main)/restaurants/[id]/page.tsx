@@ -8,6 +8,7 @@ import RestaurantActionsMenu from "@/components/restaurants/RestaurantActionsMen
 import FavoriteButton from "@/components/restaurants/FavoriteButton";
 import { ensureShareToken } from "./share-action";
 import { applyCategory } from "./category-action";
+import { appendNote } from "./note-action";
 import AddVisit from "@/components/visits/AddVisit";
 import VisitList from "@/components/visits/VisitList";
 import Sym from "@/components/ui/Sym";
@@ -200,6 +201,7 @@ export default async function RestaurantDetailPage({
             images={restaurant.images ?? []}
             currentCategory={restaurant.category ?? null}
             applyCategory={applyCategory}
+            appendNote={appendNote}
           />
         </div>
       </section>

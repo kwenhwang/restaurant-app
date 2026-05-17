@@ -5,6 +5,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { RestaurantImage } from "@/lib/types";
 import Lightbox from "./Lightbox";
+import MenuExtractor from "./MenuExtractor";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
@@ -20,6 +21,7 @@ interface Props {
   images: RestaurantImage[];
   currentCategory: string | null;
   applyCategory: (restaurantId: string, category: string) => Promise<void>;
+  appendNote: (restaurantId: string, addition: string) => Promise<void>;
 }
 
 export default function ImageUpload({
@@ -27,6 +29,7 @@ export default function ImageUpload({
   images: initialImages,
   currentCategory,
   applyCategory,
+  appendNote,
 }: Props) {
   const [images, setImages] = useState(initialImages);
   const [uploading, setUploading] = useState(false);
@@ -149,6 +152,13 @@ export default function ImageUpload({
           {images.length}장
         </span>
         <div className="flex gap-1.5">
+          {images.length > 0 && (
+            <MenuExtractor
+              restaurantId={restaurantId}
+              imageId={(images.find((i) => i.is_primary) ?? images[0]).id}
+              appendNote={appendNote}
+            />
+          )}
           {!currentCategory && images.length > 0 && !suggestion && !analyzing && (
             <button
               type="button"

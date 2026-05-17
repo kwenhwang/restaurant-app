@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import VoiceInput from "./VoiceInput";
 
 interface NearbyKakao {
   kakaoId: string;
@@ -311,6 +312,30 @@ export default function CaptureFlow() {
             <span style={{ color: "var(--text-2)" }}>{geoError ?? "위치를 켜주세요"}</span>
           )}
         </div>
+      </div>
+
+      {/* Voice input — show always so user can dictate */}
+      <div className="px-4 mt-3">
+        <VoiceInput
+          onParsed={(parsed) => {
+            if (parsed.name) {
+              setManualName(parsed.name);
+              setPicked({ kind: "manual", name: parsed.name });
+            }
+            if (parsed.rating) setRating(parsed.rating);
+            if (parsed.memo) setMemo(parsed.memo);
+            // category from voice will be applied at save time via analysis fallback;
+            // we stash it into a fake analysis to feed into the save payload
+            if (parsed.category && !analysis) {
+              setAnalysis({
+                category: parsed.category,
+                confidence: "high",
+                description: parsed.memo ?? "",
+                detected_items: [],
+              });
+            }
+          }}
+        />
       </div>
 
       {/* Candidates */}
