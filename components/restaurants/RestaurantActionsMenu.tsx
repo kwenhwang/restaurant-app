@@ -8,9 +8,10 @@ interface Props {
   restaurantId: string;
   restaurantName: string;
   deleteAction: () => Promise<void>;
+  ensureShareToken: (id: string) => Promise<string>;
 }
 
-export default function RestaurantActionsMenu({ restaurantId, restaurantName, deleteAction }: Props) {
+export default function RestaurantActionsMenu({ restaurantId, restaurantName, deleteAction, ensureShareToken }: Props) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -28,7 +29,14 @@ export default function RestaurantActionsMenu({ restaurantId, restaurantName, de
 
   async function share() {
     setOpen(false);
-    const url = window.location.href;
+    let url = window.location.href;
+    try {
+      const token = await ensureShareToken(restaurantId);
+      url = `${window.location.origin}/r/${token}`;
+    } catch {
+      // Fallback to current URL (auth-gated) if token creation fails
+    }
+
     if (navigator.share) {
       try {
         await navigator.share({ title: restaurantName, url });
@@ -39,7 +47,7 @@ export default function RestaurantActionsMenu({ restaurantId, restaurantName, de
     }
     try {
       await navigator.clipboard.writeText(url);
-      alert("링크가 복사됐어요");
+      alert("공유 링크가 복사됐어요\n(누구나 볼 수 있는 공개 페이지)");
     } catch {
       alert("공유에 실패했어요");
     }

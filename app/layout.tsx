@@ -38,6 +38,12 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              try {
+                var t = localStorage.getItem("theme");
+                if (t === "dark" || t === "light") {
+                  document.documentElement.setAttribute("data-theme", t);
+                }
+              } catch (e) {}
               window.__deferredInstall = null;
               window.addEventListener("beforeinstallprompt", function (e) {
                 e.preventDefault();

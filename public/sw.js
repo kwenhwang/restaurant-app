@@ -1,5 +1,5 @@
-const CACHE = "eatlog-v2";
-const PRECACHE = ["/", "/login", "/manifest.json", "/apple-touch-icon.png"];
+const CACHE = "eatlog-v3";
+const PRECACHE = ["/", "/login", "/offline", "/manifest.json", "/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).catch(() => {}));
@@ -20,13 +20,15 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // Bypass cross-origin + API + auth + Next data
+  // Bypass cross-origin entirely
   if (url.origin !== location.origin) return;
+
+  // Bypass API and auth — those should be fresh / fail loud
   if (url.pathname.startsWith("/api/")) return;
   if (url.pathname.startsWith("/_next/data/")) return;
   if (url.pathname.startsWith("/auth/")) return;
 
-  // Stale-while-revalidate for navigation (HTML) — instant from cache, refresh in background
+  // HTML navigation: stale-while-revalidate, offline fallback
   if (req.mode === "navigate" || req.headers.get("accept")?.includes("text/html")) {
     e.respondWith(
       caches.open(CACHE).then(async (cache) => {
@@ -36,14 +38,15 @@ self.addEventListener("fetch", (e) => {
             if (res.ok) cache.put(req, res.clone());
             return res;
           })
-          .catch(() => cached);
+          .catch(async () => cached || (await cache.match("/offline")) || Response.error());
         return cached || networkPromise;
       })
     );
     return;
   }
 
-  // Cache-first for static assets (_next/static/*, icons, etc.)
+  // Images (Next.js optimizer pipes MinIO through /_next/image): cache-first
+  // Static assets (/_next/static/*, /icons/*, /favicon.ico): cache-first
   e.respondWith(
     caches.match(req).then(
       (cached) =>
@@ -54,7 +57,7 @@ self.addEventListener("fetch", (e) => {
             caches.open(CACHE).then((c) => c.put(req, copy));
           }
           return res;
-        })
+        }).catch(() => cached || Response.error())
     )
   );
 });
