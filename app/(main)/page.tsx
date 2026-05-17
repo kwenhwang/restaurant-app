@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import HomeFilters from "@/components/home/HomeFilters";
 import AIRecommend from "@/components/home/AIRecommend";
 import { LargeTitle } from "@/components/ui/LargeTitle";
-import FAB from "@/components/ui/FAB";
 import Sym from "@/components/ui/Sym";
 
 const DEFAULT_CATEGORIES = ["전체", "한식", "일식", "중식", "양식", "카페", "술집", "기타"];
@@ -67,8 +66,6 @@ export default async function HomePage() {
       />
 
       <HomeFilters restaurants={list} categories={categories} />
-
-      <FAB />
     </>
   );
 }
