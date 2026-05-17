@@ -1,17 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Visit } from "@/lib/types";
+
+function todayLocalISO() {
+  const d = new Date();
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().split("T")[0];
+}
 
 interface Props {
   restaurantId: string;
-  onAdded?: (visit: Visit) => void;
 }
 
-export default function AddVisit({ restaurantId, onAdded }: Props) {
-  const today = new Date().toISOString().split("T")[0];
-  const [date, setDate] = useState(today);
+export default function AddVisit({ restaurantId }: Props) {
+  const router = useRouter();
+  const [date, setDate] = useState(todayLocalISO);
   const [memo, setMemo] = useState("");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -21,27 +26,40 @@ export default function AddVisit({ restaurantId, onAdded }: Props) {
     setLoading(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-    const { data } = await supabase
+    const { error } = await supabase
       .from("visits")
-      .insert({ user_id: user.id, restaurant_id: restaurantId, visited_at: date, memo: memo || null })
-      .select()
-      .single();
+      .insert({
+        user_id: user.id,
+        restaurant_id: restaurantId,
+        visited_at: date,
+        memo: memo || null,
+      });
 
-    if (data && onAdded) onAdded(data);
-    setMemo("");
-    setOpen(false);
     setLoading(false);
-    // 페이지 새로고침으로 목록 갱신
-    window.location.reload();
+
+    if (error) {
+      alert("기록 실패: " + error.message);
+      return;
+    }
+
+    setMemo("");
+    setDate(todayLocalISO());
+    setOpen(false);
+    router.refresh();
   }
 
   if (!open) {
     return (
       <button
+        type="button"
         onClick={() => setOpen(true)}
-        className="w-full text-sm text-orange-500 border border-orange-200 rounded-lg py-2 hover:bg-orange-50 transition-colors mb-4"
+        className="w-full text-[14px] font-semibold rounded-2xl py-2.5"
+        style={{ background: "var(--bg)", color: "var(--accent)" }}
       >
         + 방문 기록 추가
       </button>
@@ -49,39 +67,49 @@ export default function AddVisit({ restaurantId, onAdded }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-orange-50 rounded-lg p-4 mb-4 space-y-3">
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">방문 날짜</label>
+    <form onSubmit={handleSubmit} className="rounded-2xl p-4 space-y-3" style={{ background: "var(--bg)" }}>
+      <div className="rounded-2xl px-4 py-2.5" style={{ background: "white" }}>
+        <div className="text-[11px] font-semibold tracking-wide" style={{ color: "var(--text-2)" }}>
+          방문 날짜
+        </div>
         <input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
           required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+          className="w-full bg-transparent outline-none text-[15px] mt-0.5"
+          style={{ color: "var(--text)" }}
         />
       </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">메모 (선택)</label>
+
+      <div className="rounded-2xl px-4 py-2.5" style={{ background: "white" }}>
+        <div className="text-[11px] font-semibold tracking-wide" style={{ color: "var(--text-2)" }}>
+          메모 (선택)
+        </div>
         <input
           type="text"
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
           placeholder="간단한 메모"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+          className="w-full bg-transparent outline-none text-[15px] mt-0.5"
+          style={{ color: "var(--text)" }}
         />
       </div>
+
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 bg-orange-500 text-white text-sm font-medium py-2 rounded-lg disabled:opacity-50"
+          className="flex-1 h-[44px] rounded-2xl text-white text-[14px] font-bold disabled:opacity-50"
+          style={{ background: "var(--accent)" }}
         >
           {loading ? "저장 중..." : "기록 저장"}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="px-4 py-2 text-sm text-gray-500 border rounded-lg"
+          className="px-5 h-[44px] rounded-2xl text-[14px] font-semibold"
+          style={{ background: "white", color: "var(--text)" }}
         >
           취소
         </button>

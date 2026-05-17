@@ -30,20 +30,11 @@ export default function ImageUpload({ restaurantId, images: initialImages }: Pro
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     const { image, error } = await res.json();
 
-    if (error) {
-      alert("업로드 실패: " + error);
+    if (error || !image) {
+      alert("업로드 실패: " + (error ?? "Unknown"));
       setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
       return;
-    }
-
-    // 첫 이미지면 대표 이미지로 설정
-    if (images.length === 0) {
-      const supabase = createClient();
-      await supabase
-        .from("restaurant_images")
-        .update({ is_primary: true })
-        .eq("id", image.id);
-      image.is_primary = true;
     }
 
     setImages((prev) => [...prev, image]);
@@ -52,28 +43,46 @@ export default function ImageUpload({ restaurantId, images: initialImages }: Pro
   }
 
   async function handleDelete(img: RestaurantImage) {
-    const supabase = createClient();
-    await fetch(`/api/upload?path=${encodeURIComponent(img.storage_path)}`, { method: "DELETE" });
-    await supabase.from("restaurant_images").delete().eq("id", img.id);
-    setImages((prev) => prev.filter((i) => i.id !== img.id));
+    const res = await fetch(`/api/upload?id=${encodeURIComponent(img.id)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      alert("삭제 실패");
+      return;
+    }
+    setImages((prev) => {
+      const remaining = prev.filter((i) => i.id !== img.id);
+      // If we deleted primary, server promotes another; reflect locally by setting first as primary
+      if (img.is_primary && remaining.length > 0 && !remaining.some((i) => i.is_primary)) {
+        remaining[0] = { ...remaining[0], is_primary: true };
+      }
+      return remaining;
+    });
   }
 
   async function handleSetPrimary(imageId: string) {
     const supabase = createClient();
-    await supabase.from("restaurant_images")
+    await supabase
+      .from("restaurant_images")
       .update({ is_primary: false })
       .eq("restaurant_id", restaurantId);
-    await supabase.from("restaurant_images")
+    await supabase
+      .from("restaurant_images")
       .update({ is_primary: true })
       .eq("id", imageId);
     setImages((prev) => prev.map((i) => ({ ...i, is_primary: i.id === imageId })));
   }
 
   return (
-    <div className="bg-white rounded-xl border p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-900">사진</h3>
-        <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-sm px-3 py-1.5 rounded-lg transition-colors">
+    <div className="p-1">
+      <div className="flex items-center justify-between mb-3 px-2">
+        <span className="text-[13px]" style={{ color: "var(--text-2)" }}>
+          {images.length}장
+        </span>
+        <label
+          className="cursor-pointer rounded-full text-[13px] font-semibold px-3 py-1.5"
+          style={{ background: "var(--bg)", color: "var(--text)" }}
+        >
           {uploading ? "업로드 중..." : "+ 추가"}
           <input
             ref={inputRef}
@@ -87,33 +96,44 @@ export default function ImageUpload({ restaurantId, images: initialImages }: Pro
       </div>
 
       {images.length > 0 ? (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           {images.map((img) => (
-            <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+            <div
+              key={img.id}
+              className="relative group aspect-square rounded-xl overflow-hidden"
+              style={{ background: "var(--bg)" }}
+            >
               <Image
                 src={`${IMAGE_BASE}/${img.storage_path}`}
                 alt=""
                 fill
+                sizes="(max-width: 768px) 33vw, 200px"
                 className="object-cover"
                 unoptimized
               />
               {img.is_primary && (
-                <span className="absolute top-1 left-1 text-xs bg-orange-500 text-white px-1.5 py-0.5 rounded">
+                <span
+                  className="absolute top-1.5 left-1.5 text-[11px] font-semibold text-white px-2 py-0.5 rounded-full"
+                  style={{ background: "var(--accent)" }}
+                >
                   대표
                 </span>
               )}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity flex items-center justify-center gap-1">
                 {!img.is_primary && (
                   <button
+                    type="button"
                     onClick={() => handleSetPrimary(img.id)}
-                    className="text-xs bg-white text-gray-800 px-2 py-1 rounded"
+                    className="text-[11px] bg-white text-gray-800 px-2 py-1 rounded-full font-semibold"
                   >
-                    대표 설정
+                    대표
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => handleDelete(img)}
-                  className="text-xs bg-red-500 text-white px-2 py-1 rounded"
+                  className="text-[11px] text-white px-2 py-1 rounded-full font-semibold"
+                  style={{ background: "#FF3B30" }}
                 >
                   삭제
                 </button>
@@ -122,7 +142,9 @@ export default function ImageUpload({ restaurantId, images: initialImages }: Pro
           ))}
         </div>
       ) : (
-        <p className="text-sm text-gray-400 text-center py-4">사진이 없어요</p>
+        <p className="text-[14px] text-center py-6" style={{ color: "var(--text-2)" }}>
+          사진이 없어요
+        </p>
       )}
     </div>
   );

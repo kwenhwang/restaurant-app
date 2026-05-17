@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import DeleteButton from "@/components/restaurants/DeleteButton";
+import { deleteImage } from "@/lib/storage";
 import ImageUpload from "@/components/restaurants/ImageUpload";
 import RestaurantActionsMenu from "@/components/restaurants/RestaurantActionsMenu";
 import AddVisit from "@/components/visits/AddVisit";
@@ -46,7 +46,31 @@ export default async function RestaurantDetailPage({
   async function deleteRestaurant() {
     "use server";
     const supabase = await createClient();
-    await supabase.from("restaurants").delete().eq("id", id);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) redirect("/login");
+
+    // Fetch image storage paths so we can clean up MinIO orphans
+    const { data: imgs } = await supabase
+      .from("restaurant_images")
+      .select("storage_path")
+      .eq("restaurant_id", id);
+
+    // Verify ownership + delete row (cascade handles images, visits)
+    const { error: delErr } = await supabase
+      .from("restaurants")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (delErr) throw delErr;
+
+    // Best-effort MinIO cleanup (failures shouldn't block)
+    for (const i of imgs ?? []) {
+      await deleteImage(i.storage_path).catch(() => {});
+    }
+
     redirect("/");
   }
 
@@ -114,7 +138,7 @@ export default async function RestaurantDetailPage({
           borderTopRightRadius: 24,
         }}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <h1
               className="text-[28px] font-extrabold"
@@ -138,23 +162,24 @@ export default async function RestaurantDetailPage({
               )}
             </div>
           </div>
-
-          <button
-            type="button"
-            aria-label="즐겨찾기"
-            className="w-11 h-11 rounded-full flex items-center justify-center"
-            style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-          >
-            <Sym name="heart.fill" size={20} />
-          </button>
         </div>
 
         {/* Quick actions */}
         <div className="flex gap-2 mt-4">
-          <QuickAction icon="mappin.and.ellipse" label="길찾기" />
-          <QuickAction icon="plus.circle.fill" label="방문 기록" />
-          <QuickAction icon="square.and.pencil" label="수정" href={`/restaurants/${id}/edit`} />
-          <QuickAction icon="arrow.up.right" label="공유" />
+          {restaurant.lat && restaurant.lng && (
+            <QuickAction
+              icon="mappin.and.ellipse"
+              label="길찾기"
+              href={`https://map.kakao.com/link/to/${encodeURIComponent(restaurant.name)},${restaurant.lat},${restaurant.lng}`}
+              external
+            />
+          )}
+          <QuickAction icon="plus.circle.fill" label="방문 기록" href="#visits" />
+          <QuickAction
+            icon="square.and.pencil"
+            label="수정"
+            href={`/restaurants/${id}/edit`}
+          />
         </div>
       </section>
 
@@ -212,7 +237,7 @@ export default async function RestaurantDetailPage({
       )}
 
       {/* Visits */}
-      <section className="px-4">
+      <section id="visits" className="px-4" style={{ scrollMarginTop: 80 }}>
         <SectionHeader>방문 기록</SectionHeader>
         <div
           className="rounded-2xl p-4"
@@ -223,11 +248,6 @@ export default async function RestaurantDetailPage({
             <VisitList visits={visits ?? []} />
           </div>
         </div>
-      </section>
-
-      {/* Destructive */}
-      <section className="px-4 pt-4">
-        <DeleteButton action={deleteRestaurant} />
       </section>
     </article>
   );
@@ -255,10 +275,12 @@ function QuickAction({
   icon,
   label,
   href,
+  external,
 }: {
   icon: React.ComponentProps<typeof Sym>["name"];
   label: string;
   href?: string;
+  external?: boolean;
 }) {
   const inner = (
     <div
@@ -271,11 +293,26 @@ function QuickAction({
       <span className="text-[11px] font-semibold">{label}</span>
     </div>
   );
-  return href ? (
+
+  if (!href) return inner;
+
+  // External or in-page anchor → plain <a>; internal Next route → Link
+  if (external || href.startsWith("#") || href.startsWith("http")) {
+    return (
+      <a
+        href={href}
+        target={external ? "_blank" : undefined}
+        rel={external ? "noopener noreferrer" : undefined}
+        className="flex-1"
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  return (
     <Link href={href} className="flex-1">
       {inner}
     </Link>
-  ) : (
-    inner
   );
 }
