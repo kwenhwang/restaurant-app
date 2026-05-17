@@ -3,7 +3,7 @@ import Image from "next/image";
 import Sym from "@/components/ui/Sym";
 import Stars from "@/components/ui/Stars";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
 type Image = { id: string; storage_path: string; is_primary?: boolean };
 type Restaurant = {
@@ -16,7 +16,7 @@ type Restaurant = {
 };
 
 function imageUrl(path: string) {
-  return `${SUPABASE_URL}/storage/v1/object/public/restaurant-images/${path}`;
+  return `${IMAGE_BASE}/${path}`;
 }
 
 /**

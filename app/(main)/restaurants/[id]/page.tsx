@@ -4,16 +4,17 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import DeleteButton from "@/components/restaurants/DeleteButton";
 import ImageUpload from "@/components/restaurants/ImageUpload";
+import RestaurantActionsMenu from "@/components/restaurants/RestaurantActionsMenu";
 import AddVisit from "@/components/visits/AddVisit";
 import VisitList from "@/components/visits/VisitList";
 import Sym from "@/components/ui/Sym";
 import Stars from "@/components/ui/Stars";
 import { SectionHeader, Group, ListRow } from "@/components/ui/Group";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
 function imageUrl(path: string) {
-  return `${SUPABASE_URL}/storage/v1/object/public/restaurant-images/${path}`;
+  return `${IMAGE_BASE}/${path}`;
 }
 
 export default async function RestaurantDetailPage({
@@ -86,9 +87,11 @@ export default async function RestaurantDetailPage({
           <GlassPill href="/">
             <Sym name="chevron.left" size={18} />
           </GlassPill>
-          <GlassPill>
-            <Sym name="ellipsis" size={18} />
-          </GlassPill>
+          <RestaurantActionsMenu
+            restaurantId={id}
+            restaurantName={restaurant.name}
+            deleteAction={deleteRestaurant}
+          />
         </div>
 
         {restaurant.images && restaurant.images.length > 1 && (
