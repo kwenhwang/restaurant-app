@@ -21,15 +21,18 @@ interface CachedMenu {
 
 export const dynamic = "force-dynamic";
 
-// Cache freshness: 30 days
-const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+// Successful menu cache: 30 days (menus don't change often)
+const OK_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+// Not-found cache: 1 day (chains add new branches, info gets indexed later)
+const NEGATIVE_TTL_MS = 1 * 24 * 60 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { restaurantId } = await request.json().catch(() => ({}));
+  const body = await request.json().catch(() => ({}));
+  const { restaurantId, force } = body;
   if (!restaurantId || typeof restaurantId !== "string") {
     return NextResponse.json({ error: "restaurantId required" }, { status: 400 });
   }
@@ -62,11 +65,14 @@ export async function POST(request: NextRequest) {
   }
   const { data: cached } = await cacheQuery.maybeSingle();
 
-  const isFresh =
-    cached?.last_fetched_at &&
-    Date.now() - new Date(cached.last_fetched_at).getTime() < CACHE_TTL_MS;
+  const cachedAgeMs = cached?.last_fetched_at
+    ? Date.now() - new Date(cached.last_fetched_at).getTime()
+    : Infinity;
+  const ttl = cached?.fetch_status === "ok" ? OK_TTL_MS : NEGATIVE_TTL_MS;
+  const isFresh = cachedAgeMs < ttl;
 
-  if (cached && isFresh && cached.fetch_status === "ok" && cached.menu) {
+  // force=true bypasses cache entirely
+  if (!force && cached && isFresh && cached.fetch_status === "ok" && cached.menu) {
     // Cache hit — copy to user's restaurant too
     await supabase
       .from("restaurants")
@@ -84,14 +90,15 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (cached && isFresh && cached.fetch_status === "not_found") {
+  if (!force && cached && isFresh && cached.fetch_status === "not_found") {
     return NextResponse.json({
       found: false,
       items: [],
       price_range: null,
-      summary: "메뉴를 찾지 못했어요 (이전 검색에서도 못 찾음)",
+      summary: "메뉴를 찾지 못했어요. 잠시 후 '다시 찾기'로 재시도해 보세요.",
       source_hint: "",
       from_cache: true,
+      can_retry: true,
     });
   }
 

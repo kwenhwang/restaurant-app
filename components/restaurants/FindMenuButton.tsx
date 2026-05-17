@@ -10,6 +10,8 @@ interface FindResult {
   summary: string;
   source_hint: string;
   sources?: { url: string; title?: string }[];
+  can_retry?: boolean;
+  from_cache?: boolean;
 }
 
 interface ErrorResult {
@@ -30,7 +32,7 @@ export default function FindMenuButton({ restaurantId, saveMenu }: Props) {
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
 
-  async function find() {
+  async function find(force = false) {
     setLoading(true);
     setError(null);
     setErrorCode(null);
@@ -39,7 +41,7 @@ export default function FindMenuButton({ restaurantId, saveMenu }: Props) {
       const res = await fetch("/api/ai/find-menu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ restaurantId }),
+        body: JSON.stringify({ restaurantId, force }),
       });
       const data = (await res.json()) as FindResult | ErrorResult;
       if (!res.ok || "error" in data) {
@@ -151,14 +153,24 @@ export default function FindMenuButton({ restaurantId, saveMenu }: Props) {
           <p className="text-[11px] mt-1" style={{ color: "var(--text-3)" }}>
             메뉴판 사진을 직접 올려도 좋아요.
           </p>
-          <button
-            type="button"
-            onClick={() => setResult(null)}
-            className="mt-2 text-[12px] font-semibold"
-            style={{ color: "var(--accent)" }}
-          >
-            닫기
-          </button>
+          <div className="flex gap-2 mt-3">
+            <button
+              type="button"
+              onClick={() => find(true)}
+              className="flex-1 h-9 rounded-xl text-white text-[13px] font-bold"
+              style={{ background: "var(--accent)" }}
+            >
+              🔄 다시 찾기
+            </button>
+            <button
+              type="button"
+              onClick={() => setResult(null)}
+              className="px-4 h-9 rounded-xl text-[13px] font-semibold"
+              style={{ background: "white", color: "var(--text-2)" }}
+            >
+              닫기
+            </button>
+          </div>
         </>
       )}
 
