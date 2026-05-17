@@ -6,9 +6,15 @@ import DeleteButton from "@/components/restaurants/DeleteButton";
 import ImageUpload from "@/components/restaurants/ImageUpload";
 import AddVisit from "@/components/visits/AddVisit";
 import VisitList from "@/components/visits/VisitList";
+import Sym from "@/components/ui/Sym";
+import Stars from "@/components/ui/Stars";
+import { SectionHeader, Group, ListRow } from "@/components/ui/Group";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★★"];
+
+function imageUrl(path: string) {
+  return `${SUPABASE_URL}/storage/v1/object/public/restaurant-images/${path}`;
+}
 
 export default async function RestaurantDetailPage({
   params,
@@ -17,7 +23,9 @@ export default async function RestaurantDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: restaurant } = await supabase
     .from("restaurants")
@@ -41,54 +49,230 @@ export default async function RestaurantDetailPage({
     redirect("/");
   }
 
+  const primary =
+    restaurant.images?.find((i: { is_primary?: boolean }) => i.is_primary) ??
+    restaurant.images?.[0];
+
+  const visitCount = visits?.length ?? 0;
+  const lastVisit = visits?.[0]?.visited_at;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Link href="/" className="text-gray-400 hover:text-gray-600 text-sm">← 목록</Link>
+    <article>
+      {/* Hero */}
+      <div className="relative">
+        {primary ? (
+          <div className="relative w-full h-[300px] bg-stripe">
+            <Image
+              src={imageUrl(primary.storage_path)}
+              alt={restaurant.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 640px"
+              priority
+              className="object-cover"
+            />
+          </div>
+        ) : (
+          <div
+            className="w-full h-[300px] bg-stripe"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(22 70% 76%), hsl(46 65% 58%))",
+            }}
+          />
+        )}
+
+        {/* Glass nav overlay */}
+        <div className="absolute top-12 left-4 right-4 flex justify-between">
+          <GlassPill href="/">
+            <Sym name="chevron.left" size={18} />
+          </GlassPill>
+          <GlassPill>
+            <Sym name="ellipsis" size={18} />
+          </GlassPill>
+        </div>
+
+        {restaurant.images && restaurant.images.length > 1 && (
+          <div
+            className="absolute right-4 bottom-4 px-2.5 py-1 rounded-full text-white text-[12px] font-semibold"
+            style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)" }}
+          >
+            1 / {restaurant.images.length}
+          </div>
+        )}
       </div>
 
-      <div className="bg-white rounded-xl border p-5">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">{restaurant.name}</h2>
-            <div className="flex items-center gap-2 mt-1">
-              {restaurant.category && (
-                <span className="text-xs bg-gray-100 text-gray-600 rounded px-2 py-0.5">
-                  {restaurant.category}
-                </span>
-              )}
+      {/* Header card overlapping hero */}
+      <section
+        className="relative px-5 pt-5 pb-2"
+        style={{
+          background: "var(--bg)",
+          marginTop: -20,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h1
+              className="text-[28px] font-extrabold"
+              style={{ letterSpacing: "-0.6px" }}
+            >
+              {restaurant.name}
+            </h1>
+            <div className="flex items-center gap-2 mt-1.5">
               {restaurant.rating && (
-                <span className="text-orange-400 text-sm">{STARS[restaurant.rating]}</span>
+                <>
+                  <Stars value={restaurant.rating} size={14} />
+                  <span className="text-[13px]" style={{ color: "var(--text-2)" }}>
+                    {restaurant.rating}.0
+                  </span>
+                </>
+              )}
+              {restaurant.category && (
+                <span className="text-[13px]" style={{ color: "var(--text-2)" }}>
+                  · {restaurant.category}
+                </span>
               )}
             </div>
           </div>
-          <div className="flex gap-2">
-            <Link
-              href={`/restaurants/${id}/edit`}
-              className="text-sm text-gray-500 hover:text-gray-800 px-3 py-1.5 border rounded-lg"
-            >
-              수정
-            </Link>
-            <DeleteButton action={deleteRestaurant} />
-          </div>
+
+          <button
+            type="button"
+            aria-label="즐겨찾기"
+            className="w-11 h-11 rounded-full flex items-center justify-center"
+            style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+          >
+            <Sym name="heart.fill" size={20} />
+          </button>
         </div>
 
-        {restaurant.address && (
-          <p className="text-sm text-gray-500 mb-3">📍 {restaurant.address}</p>
-        )}
+        {/* Quick actions */}
+        <div className="flex gap-2 mt-4">
+          <QuickAction icon="mappin.and.ellipse" label="길찾기" />
+          <QuickAction icon="plus.circle.fill" label="방문 기록" />
+          <QuickAction icon="square.and.pencil" label="수정" href={`/restaurants/${id}/edit`} />
+          <QuickAction icon="arrow.up.right" label="공유" />
+        </div>
+      </section>
 
-        {restaurant.note && (
-          <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{restaurant.note}</p>
-        )}
-      </div>
+      {/* Photos */}
+      <section className="px-4">
+        <SectionHeader>사진</SectionHeader>
+        <div className="bg-white rounded-2xl p-2">
+          <ImageUpload restaurantId={id} images={restaurant.images ?? []} />
+        </div>
+      </section>
 
-      <ImageUpload restaurantId={id} images={restaurant.images ?? []} />
+      {/* Info */}
+      <section className="px-4">
+        <SectionHeader>정보</SectionHeader>
+        <Group>
+          {restaurant.address && (
+            <ListRow
+              icon="mappin"
+              label={restaurant.address}
+              trailing={<Sym name="chevron.right" size={14} />}
+            />
+          )}
+          {restaurant.category && (
+            <ListRow icon="fork.knife" label={restaurant.category} />
+          )}
+          <ListRow
+            icon="calendar"
+            label={`${visitCount}회 방문`}
+            detail={
+              lastVisit
+                ? `최근 ${new Date(lastVisit).getMonth() + 1}/${new Date(lastVisit).getDate()}`
+                : undefined
+            }
+          />
+        </Group>
+      </section>
 
-      <div className="bg-white rounded-xl border p-5">
-        <h3 className="font-semibold text-gray-900 mb-4">방문 기록</h3>
-        <AddVisit restaurantId={id} />
-        <VisitList visits={visits ?? []} />
-      </div>
+      {/* Memo */}
+      {restaurant.note && (
+        <section className="px-4">
+          <SectionHeader>메모</SectionHeader>
+          <div
+            className="rounded-2xl p-4 text-[15px] leading-relaxed"
+            style={{ background: "var(--surface)", letterSpacing: "-0.2px" }}
+          >
+            <div
+              className="text-[28px] mb-2"
+              style={{ color: "var(--accent)", lineHeight: 0.5 }}
+            >
+              “
+            </div>
+            {restaurant.note}
+          </div>
+        </section>
+      )}
+
+      {/* Visits */}
+      <section className="px-4">
+        <SectionHeader>방문 기록</SectionHeader>
+        <div
+          className="rounded-2xl p-4"
+          style={{ background: "var(--surface)" }}
+        >
+          <AddVisit restaurantId={id} />
+          <div className="mt-3">
+            <VisitList visits={visits ?? []} />
+          </div>
+        </div>
+      </section>
+
+      {/* Destructive */}
+      <section className="px-4 pt-4">
+        <DeleteButton action={deleteRestaurant} />
+      </section>
+    </article>
+  );
+}
+
+function GlassPill({
+  href,
+  children,
+}: {
+  href?: string;
+  children: React.ReactNode;
+}) {
+  const inner = (
+    <div
+      className="relative w-[38px] h-[38px] rounded-full overflow-hidden flex items-center justify-center glass"
+      style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.18)", color: "var(--text)" }}
+    >
+      {children}
     </div>
+  );
+  return href ? <Link href={href}>{inner}</Link> : inner;
+}
+
+function QuickAction({
+  icon,
+  label,
+  href,
+}: {
+  icon: React.ComponentProps<typeof Sym>["name"];
+  label: string;
+  href?: string;
+}) {
+  const inner = (
+    <div
+      className="flex-1 h-16 rounded-[14px] bg-white flex flex-col items-center justify-center gap-1"
+      style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+    >
+      <span style={{ color: "var(--accent)" }}>
+        <Sym name={icon} size={20} />
+      </span>
+      <span className="text-[11px] font-semibold">{label}</span>
+    </div>
+  );
+  return href ? (
+    <Link href={href} className="flex-1">
+      {inner}
+    </Link>
+  ) : (
+    inner
   );
 }

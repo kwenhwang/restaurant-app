@@ -1,52 +1,81 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Restaurant } from "@/lib/types";
+import Sym from "@/components/ui/Sym";
+import Stars from "@/components/ui/Stars";
 
-const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-const STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★★"];
+type Image = { id: string; storage_path: string; is_primary?: boolean };
+type Restaurant = {
+  id: string;
+  name: string;
+  category?: string | null;
+  rating?: number | null;
+  address?: string | null;
+  images?: Image[];
+};
 
+function imageUrl(path: string) {
+  return `${SUPABASE_URL}/storage/v1/object/public/restaurant-images/${path}`;
+}
+
+/**
+ * Inset-style restaurant card.
+ * Thumbnail · Name (+ bookmark) · stars · category · address.
+ */
 export default function RestaurantCard({ restaurant }: { restaurant: Restaurant }) {
-  const primaryImage = restaurant.images?.find((i) => i.is_primary) ?? restaurant.images?.[0];
-  const imageUrl = primaryImage
-    ? `${IMAGE_BASE}/${primaryImage.storage_path}`
-    : null;
+  const primary =
+    restaurant.images?.find((i) => i.is_primary) ?? restaurant.images?.[0];
 
   return (
-    <Link href={`/restaurants/${restaurant.id}`}>
-      <div className="bg-white rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all flex gap-3 p-3">
-        <div className="w-16 h-16 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={restaurant.name}
-              width={64}
-              height={64}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-2xl">🍽️</div>
-          )}
+    <Link
+      href={`/restaurants/${restaurant.id}`}
+      className="block rounded-[18px] bg-white p-2.5 flex gap-3 items-center transition-transform active:scale-[0.99]"
+      style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+    >
+      {primary ? (
+        <div className="relative w-[72px] h-[72px] rounded-[12px] overflow-hidden shrink-0 bg-stripe">
+          <Image
+            src={imageUrl(primary.storage_path)}
+            alt=""
+            fill
+            sizes="72px"
+            className="object-cover"
+          />
         </div>
+      ) : (
+        <div
+          className="w-[72px] h-[72px] rounded-[12px] shrink-0 bg-stripe"
+          style={{
+            background:
+              "linear-gradient(135deg, hsl(22 70% 76%), hsl(46 65% 58%))",
+          }}
+        />
+      )}
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-gray-900 truncate">{restaurant.name}</h3>
-            {restaurant.rating && (
-              <span className="text-orange-400 text-xs flex-shrink-0">
-                {STARS[restaurant.rating]}
-              </span>
-            )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <div className="text-[17px] font-bold tracking-tight truncate">
+            {restaurant.name}
           </div>
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <Stars value={restaurant.rating ?? 0} size={12} />
           {restaurant.category && (
-            <span className="inline-block text-xs text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 mt-1">
-              {restaurant.category}
+            <span className="text-[12px]" style={{ color: "var(--text-2)" }}>
+              · {restaurant.category}
             </span>
           )}
-          {restaurant.address && (
-            <p className="text-xs text-gray-400 mt-1 truncate">{restaurant.address}</p>
-          )}
         </div>
+        {restaurant.address && (
+          <div
+            className="flex items-center gap-1 mt-1 truncate"
+            style={{ color: "var(--text-2)" }}
+          >
+            <Sym name="mappin" size={12} strokeWidth={2} />
+            <span className="text-[12px] truncate">{restaurant.address}</span>
+          </div>
+        )}
       </div>
     </Link>
   );
