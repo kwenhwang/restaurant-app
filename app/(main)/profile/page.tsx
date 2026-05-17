@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import LogoutButton from "@/components/ui/LogoutButton";
-import Sym from "@/components/ui/Sym";
+import InstallButton from "@/components/ui/InstallButton";
 import { LargeTitle } from "@/components/ui/LargeTitle";
 import { SectionHeader, Group, ListRow } from "@/components/ui/Group";
 
@@ -44,7 +44,8 @@ export default async function ProfilePage() {
         </Group>
       </section>
 
-      <section className="px-4 pt-5">
+      <section className="px-4 pt-5 space-y-2">
+        <InstallButton />
         <LogoutButton />
       </section>
     </>
