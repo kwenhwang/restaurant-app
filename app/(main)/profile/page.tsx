@@ -4,8 +4,10 @@ import InstallButton from "@/components/ui/InstallButton";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import Stats from "@/components/profile/Stats";
 import AIInsights from "@/components/profile/AIInsights";
+import BugReportButton from "@/components/profile/BugReportButton";
 import { LargeTitle } from "@/components/ui/LargeTitle";
 import { SectionHeader, Group, ListRow } from "@/components/ui/Group";
+import { submitBugReport } from "./bug-action";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -43,6 +45,11 @@ export default async function ProfilePage() {
         <Group>
           <ListRow icon="person" label="이메일" detail={user?.email ?? "—"} />
         </Group>
+      </section>
+
+      <section className="px-4 pt-5">
+        <SectionHeader>도움말</SectionHeader>
+        <BugReportButton submit={submitBugReport} />
       </section>
 
       <section className="px-4 pt-5 space-y-2">
