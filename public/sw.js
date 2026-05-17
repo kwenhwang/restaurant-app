@@ -1,4 +1,4 @@
-const CACHE = "eatlog-v3";
+const CACHE = "eatlog-v4-20260517";
 const PRECACHE = ["/", "/login", "/offline", "/manifest.json", "/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
