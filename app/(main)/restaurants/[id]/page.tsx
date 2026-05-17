@@ -6,6 +6,7 @@ import { deleteImage } from "@/lib/storage";
 import ImageUpload from "@/components/restaurants/ImageUpload";
 import RestaurantActionsMenu from "@/components/restaurants/RestaurantActionsMenu";
 import FavoriteButton from "@/components/restaurants/FavoriteButton";
+import FindMenuButton from "@/components/restaurants/FindMenuButton";
 import { categoryStyle } from "@/lib/category-icons";
 import { ensureShareToken } from "./share-action";
 import { applyCategory } from "./category-action";
@@ -212,9 +213,11 @@ export default async function RestaurantDetailPage({
       </section>
 
       {/* Menu */}
-      {restaurant.menu && restaurant.menu.items && restaurant.menu.items.length > 0 && (
-        <section className="px-4">
-          <SectionHeader>메뉴</SectionHeader>
+      <section className="px-4">
+        <SectionHeader>메뉴</SectionHeader>
+        {(!restaurant.menu || !restaurant.menu.items || restaurant.menu.items.length === 0) ? (
+          <FindMenuButton restaurantId={id} saveMenu={saveMenu} />
+        ) : (
           <div className="bg-white rounded-2xl overflow-hidden">
             {restaurant.menu.summary && (
               <div
@@ -262,8 +265,8 @@ export default async function RestaurantDetailPage({
               </div>
             )}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* Info */}
       <section className="px-4">

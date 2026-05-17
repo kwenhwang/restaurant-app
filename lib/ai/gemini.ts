@@ -102,6 +102,83 @@ export async function generateJSONWithImage<T>(
   }
 }
 
+/**
+ * Generate JSON using Google Search grounding. The model can search the web
+ * and use results to ground its answer. Returns parsed JSON + grounding metadata.
+ *
+ * Note: responseMimeType: "application/json" is NOT compatible with tools,
+ * so we instruct the model to wrap JSON in a ```json``` block and parse manually.
+ */
+export async function generateGroundedJSON<T>(
+  prompt: string,
+  opts?: { temperature?: number; maxOutputTokens?: number }
+): Promise<{ data: T; sources: { uri: string; title?: string }[] }> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY is not configured");
+
+  const res = await fetch(`${ENDPOINT(MODEL)}?key=${key}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: {
+        temperature: opts?.temperature ?? 0.3,
+        maxOutputTokens: opts?.maxOutputTokens ?? 2000,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Gemini ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  const raw = (await res.json()) as {
+    candidates?: {
+      content?: { parts?: { text?: string }[] };
+      groundingMetadata?: {
+        groundingChunks?: { web?: { uri?: string; title?: string } }[];
+      };
+    }[];
+    promptFeedback?: { blockReason?: string };
+  };
+
+  if (raw.promptFeedback?.blockReason) {
+    throw new Error(`Gemini blocked: ${raw.promptFeedback.blockReason}`);
+  }
+
+  const text =
+    raw.candidates?.[0]?.content?.parts
+      ?.map((p) => p.text ?? "")
+      .join("") ?? "";
+
+  // Extract JSON from text (model may wrap in ```json...``` or output raw JSON)
+  let jsonStr = text.trim();
+  const fenced = jsonStr.match(/```(?:json)?\s*([\s\S]+?)\s*```/);
+  if (fenced) jsonStr = fenced[1];
+  else {
+    // Find first { ... last } heuristic
+    const start = jsonStr.indexOf("{");
+    const end = jsonStr.lastIndexOf("}");
+    if (start >= 0 && end > start) jsonStr = jsonStr.slice(start, end + 1);
+  }
+
+  let parsed: T;
+  try {
+    parsed = JSON.parse(jsonStr) as T;
+  } catch {
+    throw new Error("Gemini returned invalid JSON: " + text.slice(0, 200));
+  }
+
+  const sources = (raw.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [])
+    .map((c) => c.web)
+    .filter((w): w is { uri: string; title?: string } => !!w?.uri)
+    .slice(0, 5);
+
+  return { data: parsed, sources };
+}
+
 export async function generateText(prompt: string, opts?: { temperature?: number; maxOutputTokens?: number }): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY is not configured");
