@@ -9,6 +9,7 @@ import FavoriteButton from "@/components/restaurants/FavoriteButton";
 import FindMenuButton from "@/components/restaurants/FindMenuButton";
 import MenuPendingPoll from "@/components/restaurants/MenuPendingPoll";
 import { categoryStyle } from "@/lib/category-icons";
+import { tryCachedMenu } from "@/lib/menu-cache-lookup";
 import { ensureShareToken } from "./share-action";
 import { applyCategory } from "./category-action";
 import { appendNote } from "./note-action";
@@ -44,6 +45,25 @@ export default async function RestaurantDetailPage({
     .single();
 
   if (!restaurant) notFound();
+
+  // If this restaurant has no menu yet, try the shared place_menus cache
+  // synchronously. Hit → copy to restaurant.menu + use in this render.
+  if (
+    (!restaurant.menu ||
+      !(restaurant.menu as { items?: unknown[] }).items?.length) &&
+    restaurant.name
+  ) {
+    const cached = await tryCachedMenu({
+      restaurantId: id,
+      userId: user!.id,
+      name: restaurant.name,
+      lat: restaurant.lat,
+      lng: restaurant.lng,
+    });
+    if (cached) {
+      restaurant.menu = cached;
+    }
+  }
 
   const { data: visits } = await supabase
     .from("visits")
