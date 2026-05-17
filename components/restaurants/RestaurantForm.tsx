@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Category, Restaurant } from "@/lib/types";
+import LocationPicker from "./LocationPicker";
 
 const CATEGORIES: Category[] = ["한식", "중식", "일식", "양식", "카페", "술집", "기타"];
 
@@ -12,7 +13,8 @@ function SubmitButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg py-2.5 disabled:opacity-50 transition-colors"
+      className="w-full h-[52px] rounded-2xl text-white text-[17px] font-bold disabled:opacity-50 transition-transform active:scale-[0.98]"
+      style={{ background: "var(--accent)", boxShadow: "0 8px 20px rgba(255,111,61,0.28)" }}
     >
       {pending ? "저장 중..." : label}
     </button>
@@ -25,87 +27,63 @@ interface Props {
 }
 
 export default function RestaurantForm({ action, restaurant }: Props) {
-  const [address, setAddress] = useState(restaurant?.address ?? "");
-  const [lat, setLat] = useState(restaurant?.lat?.toString() ?? "");
-  const [lng, setLng] = useState(restaurant?.lng?.toString() ?? "");
-
-  async function searchAddress() {
-    if (!address) return;
-    try {
-      const res = await fetch(`/api/kakao/address?query=${encodeURIComponent(address)}`);
-      const data = await res.json();
-      if (data.lat && data.lng) {
-        setLat(data.lat);
-        setLng(data.lng);
-      }
-    } catch {
-      // 주소 검색 실패 시 무시
-    }
-  }
+  const [name, setName] = useState(restaurant?.name ?? "");
 
   return (
-    <form action={action} className="space-y-4 bg-white rounded-xl border p-5">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          이름 <span className="text-red-500">*</span>
-        </label>
+    <form action={action} className="space-y-5 px-5">
+      <div className="rounded-2xl px-4 py-2.5" style={{ background: "var(--bg)" }}>
+        <div className="text-[11px] font-semibold tracking-wide" style={{ color: "var(--text-2)" }}>
+          이름 <span style={{ color: "var(--accent)" }}>*</span>
+        </div>
         <input
-          name="name"
-          defaultValue={restaurant?.name}
+          name="name_visible"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
           placeholder="맛집 이름"
+          className="w-full bg-transparent outline-none text-[16px] mt-0.5"
+          style={{ color: "var(--text)" }}
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">주소</label>
-        <div className="flex gap-2">
-          <input
-            name="address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-            placeholder="주소 입력"
-          />
-          <button
-            type="button"
-            onClick={searchAddress}
-            className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-sm rounded-lg transition-colors whitespace-nowrap"
-          >
-            좌표 검색
-          </button>
-        </div>
-        <input type="hidden" name="lat" value={lat} />
-        <input type="hidden" name="lng" value={lng} />
-        {lat && lng && (
-          <p className="text-xs text-gray-400 mt-1">📍 {lat}, {lng}</p>
-        )}
-      </div>
+      <LocationPicker
+        name={name}
+        initialAddress={restaurant?.address ?? ""}
+        initialLat={restaurant?.lat ?? null}
+        initialLng={restaurant?.lng ?? null}
+        onChange={(v) => {
+          if (v.name && !name) setName(v.name);
+        }}
+      />
+
+      {/* name이 LocationPicker에서도 hidden으로 들어가지만, 사용자가 직접 수정한 경우 우선 */}
+      <input type="hidden" name="name" value={name} />
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+        <div className="rounded-2xl px-4 py-2.5" style={{ background: "var(--bg)" }}>
+          <div className="text-[11px] font-semibold tracking-wide" style={{ color: "var(--text-2)" }}>카테고리</div>
           <select
             name="category"
             defaultValue={restaurant?.category ?? ""}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+            className="w-full bg-transparent outline-none text-[15px] mt-0.5"
+            style={{ color: "var(--text)" }}
           >
-            <option value="">선택 안 함</option>
+            <option value="">선택</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">평점</label>
+        <div className="rounded-2xl px-4 py-2.5" style={{ background: "var(--bg)" }}>
+          <div className="text-[11px] font-semibold tracking-wide" style={{ color: "var(--text-2)" }}>평점</div>
           <select
             name="rating"
             defaultValue={restaurant?.rating?.toString() ?? ""}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+            className="w-full bg-transparent outline-none text-[15px] mt-0.5"
+            style={{ color: "var(--text)" }}
           >
-            <option value="">선택 안 함</option>
+            <option value="">선택</option>
             {[1, 2, 3, 4, 5].map((n) => (
               <option key={n} value={n}>{"★".repeat(n)} {n}점</option>
             ))}
@@ -113,14 +91,15 @@ export default function RestaurantForm({ action, restaurant }: Props) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">메모</label>
+      <div className="rounded-2xl px-4 py-2.5" style={{ background: "var(--bg)" }}>
+        <div className="text-[11px] font-semibold tracking-wide" style={{ color: "var(--text-2)" }}>메모</div>
         <textarea
           name="note"
           defaultValue={restaurant?.note ?? ""}
           rows={3}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
-          placeholder="메모 (선택사항)"
+          placeholder="메모 (선택)"
+          className="w-full bg-transparent outline-none text-[15px] mt-0.5 resize-none"
+          style={{ color: "var(--text)" }}
         />
       </div>
 

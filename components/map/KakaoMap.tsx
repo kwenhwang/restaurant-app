@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import type { KakaoMapInstance } from "@/lib/kakao-maps";
 
 interface MarkerData {
   id: string;
@@ -15,34 +16,6 @@ interface MarkerData {
 
 interface Props {
   restaurants: MarkerData[];
-}
-
-declare global {
-  interface Window {
-    kakao: {
-      maps: {
-        load: (callback: () => void) => void;
-        Map: new (container: HTMLElement, options: object) => KakaoMapInstance;
-        LatLng: new (lat: number, lng: number) => object;
-        Marker: new (options: object) => KakaoMarker;
-        InfoWindow: new (options: object) => KakaoInfoWindow;
-      };
-    };
-  }
-}
-
-interface KakaoMapInstance {
-  setCenter: (latlng: object) => void;
-}
-
-interface KakaoMarker {
-  setMap: (map: KakaoMapInstance | null) => void;
-  getPosition: () => object;
-}
-
-interface KakaoInfoWindow {
-  open: (map: KakaoMapInstance, marker: KakaoMarker) => void;
-  close: () => void;
 }
 
 const STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★★"];
@@ -78,7 +51,7 @@ export default function KakaoMap({ restaurants }: Props) {
             map,
           });
 
-          (window.kakao.maps as unknown as { event: { addListener: (target: object, type: string, callback: () => void) => void } }).event.addListener(marker, "click", () => {
+          window.kakao.maps.event.addListener(marker, "click", () => {
             setSelected(r);
           });
         });
