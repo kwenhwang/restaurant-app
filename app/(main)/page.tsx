@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import HomeFilters from "@/components/home/HomeFilters";
+import AIRecommend from "@/components/home/AIRecommend";
 import { LargeTitle } from "@/components/ui/LargeTitle";
 import FAB from "@/components/ui/FAB";
 import Sym from "@/components/ui/Sym";
@@ -54,6 +55,15 @@ export default async function HomePage() {
             <Sym name="sparkles" size={18} />
           </Link>
         }
+      />
+
+      <AIRecommend
+        restaurants={list.map((r) => ({
+          id: r.id,
+          name: r.name,
+          category: r.category,
+          rating: r.rating,
+        }))}
       />
 
       <HomeFilters restaurants={list} categories={categories} />

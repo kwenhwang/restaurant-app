@@ -3,6 +3,7 @@ import LogoutButton from "@/components/ui/LogoutButton";
 import InstallButton from "@/components/ui/InstallButton";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import Stats from "@/components/profile/Stats";
+import AIInsights from "@/components/profile/AIInsights";
 import { LargeTitle } from "@/components/ui/LargeTitle";
 import { SectionHeader, Group, ListRow } from "@/components/ui/Group";
 
@@ -29,6 +30,8 @@ export default async function ProfilePage() {
       <LargeTitle title="프로필" meta={user?.email ?? undefined} />
 
       <Stats restaurants={restaurants ?? []} visits={visits ?? []} />
+
+      <AIInsights hasVisits={(visits?.length ?? 0) > 0} />
 
       <section className="px-4 pt-5">
         <SectionHeader>테마</SectionHeader>
