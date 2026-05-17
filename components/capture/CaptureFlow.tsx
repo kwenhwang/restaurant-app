@@ -210,6 +210,18 @@ export default function CaptureFlow() {
         memo: memo || null,
       });
 
+      // Fire-and-forget: auto-fetch menu in the background.
+      // Only for new restaurants (not re-visits), and only if no menu yet.
+      // keepalive: true ensures the request completes even if user navigates away.
+      if (picked.kind !== "mine") {
+        fetch("/api/ai/find-menu", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ restaurantId }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+
       router.push(`/restaurants/${restaurantId}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "저장 실패";

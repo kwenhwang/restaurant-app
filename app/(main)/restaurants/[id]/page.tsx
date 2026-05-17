@@ -7,6 +7,7 @@ import ImageUpload from "@/components/restaurants/ImageUpload";
 import RestaurantActionsMenu from "@/components/restaurants/RestaurantActionsMenu";
 import FavoriteButton from "@/components/restaurants/FavoriteButton";
 import FindMenuButton from "@/components/restaurants/FindMenuButton";
+import MenuPendingPoll from "@/components/restaurants/MenuPendingPoll";
 import { categoryStyle } from "@/lib/category-icons";
 import { ensureShareToken } from "./share-action";
 import { applyCategory } from "./category-action";
@@ -216,7 +217,23 @@ export default async function RestaurantDetailPage({
       <section className="px-4">
         <SectionHeader>메뉴</SectionHeader>
         {(!restaurant.menu || !restaurant.menu.items || restaurant.menu.items.length === 0) ? (
-          <FindMenuButton restaurantId={id} saveMenu={saveMenu} />
+          (() => {
+            // If restaurant was just created (<= 60s ago) menu is being auto-fetched
+            // in the background — show a pending indicator + poller.
+            const justCreated =
+              restaurant.created_at &&
+              Date.now() - new Date(restaurant.created_at).getTime() < 60_000;
+            return justCreated ? (
+              <>
+                <MenuPendingPoll restaurantId={id} />
+                <div className="mt-2">
+                  <FindMenuButton restaurantId={id} saveMenu={saveMenu} />
+                </div>
+              </>
+            ) : (
+              <FindMenuButton restaurantId={id} saveMenu={saveMenu} />
+            );
+          })()
         ) : (
           <div className="bg-white rounded-2xl overflow-hidden">
             {restaurant.menu.summary && (

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateGroundedJSON } from "@/lib/ai/gemini";
+import { normalizeName, bucketCoord } from "@/lib/place-cache";
 
 interface MenuResult {
   found: boolean;
@@ -10,7 +12,17 @@ interface MenuResult {
   source_hint: string;
 }
 
+interface CachedMenu {
+  items: { name: string; price: string | null }[];
+  price_range: string | null;
+  summary: string | null;
+  source: "ai-vision" | "manual" | "ai-search";
+}
+
 export const dynamic = "force-dynamic";
+
+// Cache freshness: 30 days
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -24,7 +36,7 @@ export async function POST(request: NextRequest) {
 
   const { data: restaurant } = await supabase
     .from("restaurants")
-    .select("id, name, address, category")
+    .select("id, name, address, category, lat, lng, menu")
     .eq("id", restaurantId)
     .eq("user_id", user.id)
     .single();
@@ -33,12 +45,59 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const locationHint = restaurant.address
-    ? ` (주소: ${restaurant.address})`
-    : "";
-  const categoryHint = restaurant.category
-    ? ` 카테고리: ${restaurant.category}.`
-    : "";
+  // Admin client for cache reads/writes (RLS bypass to share across users)
+  const admin = createAdminClient();
+  const nameKey = normalizeName(restaurant.name);
+  const { latBucket, lngBucket } = bucketCoord(restaurant.lat, restaurant.lng);
+
+  // 1. Try cache first
+  const cacheQuery = admin
+    .from("place_menus")
+    .select("menu, fetch_status, last_fetched_at")
+    .eq("name_normalized", nameKey);
+  if (latBucket !== null) {
+    cacheQuery.eq("lat_bucket", latBucket).eq("lng_bucket", lngBucket);
+  } else {
+    cacheQuery.is("lat_bucket", null).is("lng_bucket", null);
+  }
+  const { data: cached } = await cacheQuery.maybeSingle();
+
+  const isFresh =
+    cached?.last_fetched_at &&
+    Date.now() - new Date(cached.last_fetched_at).getTime() < CACHE_TTL_MS;
+
+  if (cached && isFresh && cached.fetch_status === "ok" && cached.menu) {
+    // Cache hit — copy to user's restaurant too
+    await supabase
+      .from("restaurants")
+      .update({ menu: cached.menu })
+      .eq("id", restaurantId)
+      .eq("user_id", user.id);
+
+    return NextResponse.json({
+      found: true,
+      items: (cached.menu as CachedMenu).items,
+      price_range: (cached.menu as CachedMenu).price_range,
+      summary: (cached.menu as CachedMenu).summary ?? "",
+      source_hint: "다른 사용자가 이미 등록한 메뉴",
+      from_cache: true,
+    });
+  }
+
+  if (cached && isFresh && cached.fetch_status === "not_found") {
+    return NextResponse.json({
+      found: false,
+      items: [],
+      price_range: null,
+      summary: "메뉴를 찾지 못했어요 (이전 검색에서도 못 찾음)",
+      source_hint: "",
+      from_cache: true,
+    });
+  }
+
+  // 2. Cache miss or stale — call Gemini grounding
+  const locationHint = restaurant.address ? ` (주소: ${restaurant.address})` : "";
+  const categoryHint = restaurant.category ? ` 카테고리: ${restaurant.category}.` : "";
 
   const prompt = `구글 검색으로 "${restaurant.name}"${locationHint}${categoryHint} 의 메뉴를 찾아.
 
@@ -51,18 +110,75 @@ export async function POST(request: NextRequest) {
 
 못 찾으면: {"found":false,"items":[],"price_range":null,"summary":"메뉴를 찾지 못했어요","source_hint":""}`;
 
+  let result: MenuResult;
+  let aiError: string | null = null;
   try {
-    const { data, sources } = await generateGroundedJSON<MenuResult>(prompt, {
+    const { data } = await generateGroundedJSON<MenuResult>(prompt, {
       temperature: 0.2,
       maxOutputTokens: 4000,
     });
-
-    return NextResponse.json({
-      ...data,
-      sources: sources.map((s) => ({ url: s.uri, title: s.title })),
-    });
+    result = data;
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "AI error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    aiError = e instanceof Error ? e.message : "AI error";
+    // Mark error in cache so we don't immediately retry
+    await admin
+      .from("place_menus")
+      .upsert({
+        name_normalized: nameKey,
+        lat_bucket: latBucket,
+        lng_bucket: lngBucket,
+        display_name: restaurant.name,
+        fetch_status: "error",
+        last_fetched_at: new Date().toISOString(),
+      }, { onConflict: "name_normalized,lat_bucket,lng_bucket" })
+      .select();
+    return NextResponse.json({ error: aiError }, { status: 500 });
   }
+
+  // 3. Save to shared cache + user's restaurant
+  if (result.found && result.items?.length > 0) {
+    const menuPayload: CachedMenu = {
+      items: result.items.slice(0, 12),
+      price_range: result.price_range,
+      summary: result.summary,
+      source: "ai-search",
+    };
+
+    await admin.from("place_menus").upsert(
+      {
+        name_normalized: nameKey,
+        lat_bucket: latBucket,
+        lng_bucket: lngBucket,
+        display_name: restaurant.name,
+        menu: menuPayload,
+        fetch_status: "ok",
+        last_fetched_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "name_normalized,lat_bucket,lng_bucket" }
+    );
+
+    await supabase
+      .from("restaurants")
+      .update({ menu: menuPayload })
+      .eq("id", restaurantId)
+      .eq("user_id", user.id);
+  } else {
+    // Not found — cache the negative result
+    await admin.from("place_menus").upsert(
+      {
+        name_normalized: nameKey,
+        lat_bucket: latBucket,
+        lng_bucket: lngBucket,
+        display_name: restaurant.name,
+        menu: null,
+        fetch_status: "not_found",
+        last_fetched_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "name_normalized,lat_bucket,lng_bucket" }
+    );
+  }
+
+  return NextResponse.json({ ...result, from_cache: false });
 }
