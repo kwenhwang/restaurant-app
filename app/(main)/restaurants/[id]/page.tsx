@@ -6,6 +6,7 @@ import { deleteImage } from "@/lib/storage";
 import ImageUpload from "@/components/restaurants/ImageUpload";
 import RestaurantActionsMenu from "@/components/restaurants/RestaurantActionsMenu";
 import FavoriteButton from "@/components/restaurants/FavoriteButton";
+import { categoryStyle } from "@/lib/category-icons";
 import { ensureShareToken } from "./share-action";
 import { applyCategory } from "./category-action";
 import { appendNote } from "./note-action";
@@ -90,7 +91,7 @@ export default async function RestaurantDetailPage({
       {/* Hero */}
       <div className="relative">
         {primary ? (
-          <div className="relative w-full h-[300px] bg-stripe">
+          <div className="relative w-full h-[300px]">
             <Image
               src={imageUrl(primary.storage_path)}
               alt={restaurant.name}
@@ -100,15 +101,18 @@ export default async function RestaurantDetailPage({
               className="object-cover"
             />
           </div>
-        ) : (
-          <div
-            className="w-full h-[300px] bg-stripe"
-            style={{
-              background:
-                "linear-gradient(135deg, hsl(22 70% 76%), hsl(46 65% 58%))",
-            }}
-          />
-        )}
+        ) : (() => {
+          const s = categoryStyle(restaurant.category);
+          return (
+            <div
+              className="w-full h-[300px] flex items-center justify-center text-[100px]"
+              style={{ background: s.gradient }}
+              aria-hidden="true"
+            >
+              <span style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.12))" }}>{s.emoji}</span>
+            </div>
+          );
+        })()}
 
         {/* Glass nav overlay */}
         <div className="absolute top-12 left-4 right-4 flex justify-between">

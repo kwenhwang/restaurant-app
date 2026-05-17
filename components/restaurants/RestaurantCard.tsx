@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Sym from "@/components/ui/Sym";
 import Stars from "@/components/ui/Stars";
+import { categoryStyle } from "@/lib/category-icons";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
@@ -35,7 +36,7 @@ export default function RestaurantCard({ restaurant }: { restaurant: Restaurant 
       style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
     >
       {primary ? (
-        <div className="relative w-[72px] h-[72px] rounded-[12px] overflow-hidden shrink-0 bg-stripe">
+        <div className="relative w-[72px] h-[72px] rounded-[12px] overflow-hidden shrink-0">
           <Image
             src={imageUrl(primary.storage_path)}
             alt=""
@@ -44,15 +45,18 @@ export default function RestaurantCard({ restaurant }: { restaurant: Restaurant 
             className="object-cover"
           />
         </div>
-      ) : (
-        <div
-          className="w-[72px] h-[72px] rounded-[12px] shrink-0 bg-stripe"
-          style={{
-            background:
-              "linear-gradient(135deg, hsl(22 70% 76%), hsl(46 65% 58%))",
-          }}
-        />
-      )}
+      ) : (() => {
+        const s = categoryStyle(restaurant.category);
+        return (
+          <div
+            className="w-[72px] h-[72px] rounded-[12px] shrink-0 flex items-center justify-center text-[34px]"
+            style={{ background: s.gradient }}
+            aria-hidden="true"
+          >
+            <span style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.08))" }}>{s.emoji}</span>
+          </div>
+        );
+      })()}
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">

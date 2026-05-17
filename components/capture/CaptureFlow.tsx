@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { categoryStyle } from "@/lib/category-icons";
 import VoiceInput from "./VoiceInput";
 
 interface NearbyKakao {
@@ -352,6 +353,7 @@ export default function CaptureFlow() {
                   subtitle={`${r.distance.toFixed(0)}m · ${r.category ?? "?"}`}
                   badge="다시 방문"
                   selected={isPicked}
+                  category={r.category}
                   onClick={() => setPicked({ kind: "mine", r })}
                   image={(() => {
                     const p = r.images?.find((i) => i.is_primary) ?? r.images?.[0];
@@ -378,6 +380,7 @@ export default function CaptureFlow() {
                   title={r.name}
                   subtitle={`${r.distance}m · ${r.category}`}
                   selected={isPicked}
+                  category={r.category}
                   onClick={() => setPicked({ kind: "kakao", r })}
                 />
               );
@@ -533,10 +536,12 @@ interface CandidateProps {
   badge?: string;
   selected?: boolean;
   image?: string | null;
+  category?: string | null;
   onClick: () => void;
 }
 
-function Candidate({ title, subtitle, badge, selected, image, onClick }: CandidateProps) {
+function Candidate({ title, subtitle, badge, selected, image, category, onClick }: CandidateProps) {
+  const s = categoryStyle(category);
   return (
     <button
       type="button"
@@ -547,14 +552,16 @@ function Candidate({ title, subtitle, badge, selected, image, onClick }: Candida
         boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
       }}
     >
-      {image && (
-        <div
-          className="w-12 h-12 rounded-xl overflow-hidden relative shrink-0"
-          style={{ background: "var(--bg)" }}
-        >
+      <div
+        className="w-12 h-12 rounded-xl overflow-hidden relative shrink-0 flex items-center justify-center text-[22px]"
+        style={{ background: image ? "var(--bg)" : s.gradient }}
+      >
+        {image ? (
           <Image src={image} alt="" fill sizes="48px" className="object-cover" />
-        </div>
-      )}
+        ) : (
+          <span aria-hidden="true">{s.emoji}</span>
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <span className="text-[15px] font-bold truncate">{title}</span>

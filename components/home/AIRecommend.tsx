@@ -25,7 +25,25 @@ interface Props {
 }
 
 const STORAGE_KEY = "ai-recommend-cache";
-const TTL_MS = 60 * 60 * 1000; // 1 hour
+const TTL_MS = 10 * 60 * 1000; // 10 minutes (shorter since location-aware)
+
+function getCachedLocation(): { lat: number; lng: number } | null {
+  try {
+    const raw = sessionStorage.getItem("user-location");
+    if (!raw) return null;
+    const { lat, lng, t } = JSON.parse(raw);
+    if (Date.now() - t > 5 * 60 * 1000) return null; // 5 min
+    return { lat, lng };
+  } catch {
+    return null;
+  }
+}
+
+function saveLocation(lat: number, lng: number) {
+  try {
+    sessionStorage.setItem("user-location", JSON.stringify({ lat, lng, t: Date.now() }));
+  } catch {}
+}
 
 export default function AIRecommend({ restaurants }: Props) {
   const [data, setData] = useState<AIResult | null>(null);
@@ -37,7 +55,6 @@ export default function AIRecommend({ restaurants }: Props) {
       setLoading(false);
       return;
     }
-    // Try cache first
     try {
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
@@ -57,7 +74,26 @@ export default function AIRecommend({ restaurants }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/ai/recommend", { cache: force ? "no-store" : "default" });
+      // Try to get location: cached first, then ask geolocation (non-blocking)
+      let coord = getCachedLocation();
+      if (!coord && navigator.geolocation) {
+        coord = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+              saveLocation(c.lat, c.lng);
+              resolve(c);
+            },
+            () => resolve(null),
+            { timeout: 4000, maximumAge: 5 * 60 * 1000 }
+          );
+        });
+      }
+
+      const url = coord
+        ? `/api/ai/recommend?lat=${coord.lat}&lng=${coord.lng}`
+        : "/api/ai/recommend";
+      const res = await fetch(url, { cache: force ? "no-store" : "default" });
       if (!res.ok) throw new Error("추천을 불러올 수 없어요");
       const json: AIResult = await res.json();
       setData(json);
