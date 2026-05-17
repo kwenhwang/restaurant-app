@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { deleteImage } from "@/lib/storage";
 import ImageUpload from "@/components/restaurants/ImageUpload";
 import RestaurantActionsMenu from "@/components/restaurants/RestaurantActionsMenu";
+import FavoriteButton from "@/components/restaurants/FavoriteButton";
 import AddVisit from "@/components/visits/AddVisit";
 import VisitList from "@/components/visits/VisitList";
 import Sym from "@/components/ui/Sym";
@@ -162,6 +163,10 @@ export default async function RestaurantDetailPage({
               )}
             </div>
           </div>
+          <FavoriteButton
+            restaurantId={id}
+            initial={Boolean(restaurant.is_favorite)}
+          />
         </div>
 
         {/* Quick actions */}

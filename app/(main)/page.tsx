@@ -15,7 +15,7 @@ export default async function HomePage() {
 
   const { data: restaurants } = await supabase
     .from("restaurants")
-    .select("id, name, address, category, rating, created_at, images:restaurant_images(id, storage_path, is_primary)")
+    .select("id, name, address, category, rating, is_favorite, created_at, images:restaurant_images(id, storage_path, is_primary)")
     .eq("user_id", user!.id)
     .order("created_at", { ascending: false });
 

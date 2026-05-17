@@ -1,4 +1,5 @@
 import TabBar from "@/components/ui/TabBar";
+import PullToRefresh from "@/components/ui/PullToRefresh";
 
 /**
  * Main layout — Apple HIG mobile shell.
@@ -13,6 +14,7 @@ export default function MainLayout({
 }) {
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+      <PullToRefresh />
       <main
         className="mx-auto max-w-[640px]"
         style={{ paddingBottom: "120px" /* clear the tab bar */ }}

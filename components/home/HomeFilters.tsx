@@ -17,6 +17,7 @@ export interface RestaurantItem {
   address?: string | null;
   category?: string | null;
   rating?: number | null;
+  is_favorite?: boolean;
   created_at?: string;
   images?: Image[];
 }
@@ -37,11 +38,16 @@ const SORT_LABEL: Record<Sort, string> = {
 export default function HomeFilters({ restaurants, categories }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("전체");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [sort, setSort] = useState<Sort>("recent");
   const [sortOpen, setSortOpen] = useState(false);
 
   const filtered = useMemo(() => {
     let list = restaurants;
+
+    if (favoritesOnly) {
+      list = list.filter((r) => r.is_favorite);
+    }
 
     if (category !== "전체") {
       list = list.filter((r) => r.category === category);
@@ -66,7 +72,9 @@ export default function HomeFilters({ restaurants, categories }: Props) {
       sorted.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     }
     return sorted;
-  }, [restaurants, query, category, sort]);
+  }, [restaurants, query, category, favoritesOnly, sort]);
+
+  const favCount = restaurants.filter((r) => r.is_favorite).length;
 
   return (
     <>
@@ -103,6 +111,28 @@ export default function HomeFilters({ restaurants, categories }: Props) {
 
       {/* Filter chips */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 pb-3.5 items-center">
+        {favCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setFavoritesOnly((v) => !v)}
+            className="shrink-0 px-3 py-2 rounded-full text-[14px] font-semibold flex items-center gap-1 transition-colors"
+            style={
+              favoritesOnly
+                ? { background: "var(--accent)", color: "#fff" }
+                : {
+                    background: "#fff",
+                    color: "var(--accent)",
+                    boxShadow:
+                      "0 1px 2px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+                  }
+            }
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+            즐겨찾기
+          </button>
+        )}
         {categories.map((c) => {
           const active = c === category;
           return (

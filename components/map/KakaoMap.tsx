@@ -20,6 +20,21 @@ interface Props {
 
 const STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★★"];
 
+function clusterStyle(size: number, bg: string) {
+  return {
+    width: `${size}px`,
+    height: `${size}px`,
+    background: bg,
+    borderRadius: "50%",
+    color: "#fff",
+    textAlign: "center" as const,
+    lineHeight: `${size}px`,
+    fontSize: "14px",
+    fontWeight: "700",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+  };
+}
+
 export default function KakaoMap({ restaurants }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<MarkerData | null>(null);
@@ -28,7 +43,7 @@ export default function KakaoMap({ restaurants }: Props) {
 
   useEffect(() => {
     const script = document.createElement("script");
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY}&autoload=false`;
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY}&libraries=clusterer&autoload=false`;
     script.async = true;
 
     const timeout = setTimeout(() => {
@@ -61,16 +76,47 @@ export default function KakaoMap({ restaurants }: Props) {
         });
         mapInstance.current = map;
 
-        restaurants.forEach((r) => {
+        // Build markers
+        const markers = restaurants.map((r) => {
           const marker = new window.kakao.maps.Marker({
             position: new window.kakao.maps.LatLng(r.lat, r.lng),
-            map,
           });
-
           window.kakao.maps.event.addListener(marker, "click", () => {
             setSelected(r);
           });
+          return marker;
         });
+
+        // Use clusterer when many markers; otherwise place directly
+        const kakaoMaps = window.kakao.maps as unknown as {
+          MarkerClusterer?: new (opts: {
+            map: KakaoMapInstance;
+            averageCenter?: boolean;
+            minLevel?: number;
+            disableClickZoom?: boolean;
+            calculator?: number[];
+            styles?: object[];
+          }) => { addMarkers: (m: object[]) => void };
+        };
+
+        if (markers.length >= 10 && kakaoMaps.MarkerClusterer) {
+          const clusterer = new kakaoMaps.MarkerClusterer({
+            map,
+            averageCenter: true,
+            minLevel: 6,
+            calculator: [10, 30, 50, 100],
+            styles: [
+              clusterStyle(36, "#FF6F3D"),
+              clusterStyle(42, "#FF6F3D"),
+              clusterStyle(48, "#D94A1E"),
+              clusterStyle(54, "#D94A1E"),
+              clusterStyle(60, "#A83D17"),
+            ],
+          });
+          clusterer.addMarkers(markers);
+        } else {
+          markers.forEach((m) => (m as unknown as { setMap: (m: KakaoMapInstance) => void }).setMap(map));
+        }
       });
     };
 

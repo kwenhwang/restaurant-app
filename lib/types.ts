@@ -17,6 +17,7 @@ export interface Restaurant {
   category: Category | null;
   rating: number | null;
   note: string | null;
+  is_favorite: boolean;
   created_at: string;
   images?: RestaurantImage[];
   visits?: Visit[];
