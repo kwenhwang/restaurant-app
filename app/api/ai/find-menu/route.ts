@@ -111,7 +111,6 @@ export async function POST(request: NextRequest) {
 못 찾으면: {"found":false,"items":[],"price_range":null,"summary":"메뉴를 찾지 못했어요","source_hint":""}`;
 
   let result: MenuResult;
-  let aiError: string | null = null;
   try {
     const { data } = await generateGroundedJSON<MenuResult>(prompt, {
       temperature: 0.2,
@@ -119,20 +118,28 @@ export async function POST(request: NextRequest) {
     });
     result = data;
   } catch (e) {
-    aiError = e instanceof Error ? e.message : "AI error";
-    // Mark error in cache so we don't immediately retry
-    await admin
-      .from("place_menus")
-      .upsert({
-        name_normalized: nameKey,
-        lat_bucket: latBucket,
-        lng_bucket: lngBucket,
-        display_name: restaurant.name,
-        fetch_status: "error",
-        last_fetched_at: new Date().toISOString(),
-      }, { onConflict: "name_normalized,lat_bucket,lng_bucket" })
-      .select();
-    return NextResponse.json({ error: aiError }, { status: 500 });
+    const raw = e instanceof Error ? e.message : "AI error";
+    const isQuota = /429|quota|rate.?limit/i.test(raw);
+    const userMessage = isQuota
+      ? "AI 검색 사용량이 잠시 한도에 닿았어요. 잠시 후 다시 시도하거나 메뉴판 사진으로 추출해 보세요."
+      : "메뉴 검색에 실패했어요. 잠시 후 다시 시도해 주세요.";
+    // Don't cache quota errors (transient); cache only true errors lightly
+    if (!isQuota) {
+      await admin
+        .from("place_menus")
+        .upsert({
+          name_normalized: nameKey,
+          lat_bucket: latBucket,
+          lng_bucket: lngBucket,
+          display_name: restaurant.name,
+          fetch_status: "error",
+          last_fetched_at: new Date().toISOString(),
+        }, { onConflict: "name_normalized,lat_bucket,lng_bucket" });
+    }
+    return NextResponse.json(
+      { error: userMessage, code: isQuota ? "QUOTA_EXCEEDED" : "AI_ERROR" },
+      { status: isQuota ? 429 : 502 }
+    );
   }
 
   // 3. Save to shared cache + user's restaurant

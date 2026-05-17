@@ -12,6 +12,11 @@ interface FindResult {
   sources?: { url: string; title?: string }[];
 }
 
+interface ErrorResult {
+  error: string;
+  code?: "QUOTA_EXCEEDED" | "AI_ERROR";
+}
+
 interface Props {
   restaurantId: string;
   saveMenu: (restaurantId: string, menu: MenuData) => Promise<void>;
@@ -21,12 +26,14 @@ export default function FindMenuButton({ restaurantId, saveMenu }: Props) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<FindResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
 
   async function find() {
     setLoading(true);
     setError(null);
+    setErrorCode(null);
     setResult(null);
     try {
       const res = await fetch("/api/ai/find-menu", {
@@ -34,9 +41,11 @@ export default function FindMenuButton({ restaurantId, saveMenu }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ restaurantId }),
       });
-      const data: FindResult = await res.json();
-      if (!res.ok || ("error" in data && data.error)) {
-        throw new Error((data as unknown as { error: string }).error ?? "검색 실패");
+      const data = (await res.json()) as FindResult | ErrorResult;
+      if (!res.ok || "error" in data) {
+        const errData = data as ErrorResult;
+        setErrorCode(errData.code ?? "AI_ERROR");
+        throw new Error(errData.error ?? "검색 실패");
       }
       setResult(data);
     } catch (e) {
@@ -115,12 +124,17 @@ export default function FindMenuButton({ restaurantId, saveMenu }: Props) {
 
       {error && (
         <>
-          <div className="text-[13px]" style={{ color: "#FF3B30" }}>
-            {error}
+          <div className="flex items-start gap-2">
+            <span className="text-[14px]">
+              {errorCode === "QUOTA_EXCEEDED" ? "⏳" : "⚠️"}
+            </span>
+            <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-2)" }}>
+              {error}
+            </p>
           </div>
           <button
             type="button"
-            onClick={() => { setError(null); find(); }}
+            onClick={() => { setError(null); setErrorCode(null); find(); }}
             className="mt-2 text-[12px] font-semibold"
             style={{ color: "var(--accent)" }}
           >
