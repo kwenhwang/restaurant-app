@@ -34,6 +34,24 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko" className="h-full antialiased">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.__deferredInstall = null;
+              window.addEventListener("beforeinstallprompt", function (e) {
+                e.preventDefault();
+                window.__deferredInstall = e;
+                window.dispatchEvent(new Event("pwa-installable"));
+              });
+              window.addEventListener("appinstalled", function () {
+                window.__deferredInstall = null;
+                window.dispatchEvent(new Event("pwa-installed"));
+              });
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full bg-bg text-text">
         {children}
         <RegisterSW />

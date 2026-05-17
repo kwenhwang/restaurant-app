@@ -7,8 +7,14 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+declare global {
+  interface Window {
+    __deferredInstall: BeforeInstallPromptEvent | null;
+  }
+}
+
 export default function InstallButton() {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  const [available, setAvailable] = useState(false);
   const [installed, setInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showIOSHelp, setShowIOSHelp] = useState(false);
@@ -28,17 +34,18 @@ export default function InstallButton() {
       setIsIOS(true);
     }
 
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
-    };
-    const onInstalled = () => setInstalled(true);
+    if (window.__deferredInstall) setAvailable(true);
 
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    window.addEventListener("appinstalled", onInstalled);
+    const onInstallable = () => setAvailable(true);
+    const onInstalled = () => {
+      setInstalled(true);
+      setAvailable(false);
+    };
+    window.addEventListener("pwa-installable", onInstallable);
+    window.addEventListener("pwa-installed", onInstalled);
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-      window.removeEventListener("appinstalled", onInstalled);
+      window.removeEventListener("pwa-installable", onInstallable);
+      window.removeEventListener("pwa-installed", onInstalled);
     };
   }, []);
 
@@ -49,14 +56,32 @@ export default function InstallButton() {
       setShowIOSHelp(true);
       return;
     }
-    if (!deferred) {
-      alert("설치 아이콘을 찾을 수 없어요. 브라우저 메뉴(⋮) → '앱 설치'를 눌러 주세요.");
+    const prompt = window.__deferredInstall;
+    if (!prompt) {
+      alert(
+        "설치 버튼이 아직 활성화되지 않았어요.\n\n앱을 한 번 새로고침하거나, Chrome 메뉴(⋮) → '앱 설치'를 직접 눌러 주세요."
+      );
       return;
     }
-    await deferred.prompt();
-    const { outcome } = await deferred.userChoice;
-    if (outcome === "accepted") setInstalled(true);
-    setDeferred(null);
+    await prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === "accepted") {
+      setInstalled(true);
+    }
+    window.__deferredInstall = null;
+    setAvailable(false);
+  }
+
+  const showButton = isIOS || available;
+  if (!showButton) {
+    return (
+      <div
+        className="w-full rounded-2xl px-4 py-3 text-[13px]"
+        style={{ background: "var(--bg)", color: "var(--text-2)" }}
+      >
+        Chrome 메뉴(⋮) → &quot;앱 설치&quot;로 설치할 수 있어요
+      </div>
+    );
   }
 
   return (
@@ -64,8 +89,8 @@ export default function InstallButton() {
       <button
         type="button"
         onClick={install}
-        className="w-full h-[44px] rounded-2xl text-[14px] font-semibold flex items-center justify-center gap-2"
-        style={{ background: "var(--bg)", color: "var(--text)" }}
+        className="w-full h-[44px] rounded-2xl text-white text-[14px] font-semibold flex items-center justify-center gap-2"
+        style={{ background: "var(--accent)" }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
@@ -86,8 +111,8 @@ export default function InstallButton() {
             <h3 className="text-[17px] font-bold">홈 화면에 추가</h3>
             <ol className="text-[14px] space-y-1.5" style={{ color: "var(--text-2)" }}>
               <li>1. Safari 하단 공유 버튼 (네모+화살표) 탭</li>
-              <li>2. 메뉴에서 "홈 화면에 추가" 선택</li>
-              <li>3. "추가" 탭</li>
+              <li>2. 메뉴에서 &quot;홈 화면에 추가&quot; 선택</li>
+              <li>3. &quot;추가&quot; 탭</li>
             </ol>
             <button
               onClick={() => setShowIOSHelp(false)}
