@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Sym from "./Sym";
 
-export default function FAB({ href = "/restaurants/new" }: { href?: string }) {
+export default function FAB({ href = "/capture" }: { href?: string }) {
   return (
     <Link
       href={href}
