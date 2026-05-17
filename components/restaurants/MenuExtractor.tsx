@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { MenuData } from "@/app/(main)/restaurants/[id]/menu-action";
 
 interface MenuItem {
   name: string;
@@ -16,10 +17,10 @@ interface MenuResult {
 interface Props {
   restaurantId: string;
   imageId: string;
-  appendNote: (restaurantId: string, addition: string) => Promise<void>;
+  saveMenu: (restaurantId: string, menu: MenuData) => Promise<void>;
 }
 
-export default function MenuExtractor({ restaurantId, imageId, appendNote }: Props) {
+export default function MenuExtractor({ restaurantId, imageId, saveMenu }: Props) {
   const [result, setResult] = useState<MenuResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -46,23 +47,23 @@ export default function MenuExtractor({ restaurantId, imageId, appendNote }: Pro
     }
   }
 
-  function applyToMemo() {
+  function save() {
     if (!result || result.items.length === 0) return;
-    const lines = [
-      result.summary,
-      ...result.items.slice(0, 8).map(
-        (i) => `• ${i.name}${i.price ? ` — ${i.price}` : ""}`
-      ),
-    ];
-    if (result.price_range) lines.push(`(${result.price_range})`);
-    const addition = lines.join("\n");
     startTransition(async () => {
       try {
-        await appendNote(restaurantId, addition);
+        await saveMenu(restaurantId, {
+          items: result.items,
+          price_range: result.price_range,
+          summary: result.summary,
+          source: "ai-vision",
+        });
         setApplied(true);
-        setTimeout(() => setApplied(false), 2000);
+        setTimeout(() => {
+          setApplied(false);
+          setResult(null);
+        }, 1500);
       } catch {
-        setError("메모 저장 실패");
+        setError("저장 실패");
       }
     });
   }
@@ -112,16 +113,26 @@ export default function MenuExtractor({ restaurantId, imageId, appendNote }: Pro
       )}
 
       {result && result.items.length === 0 && (
-        <div className="text-[13px]" style={{ color: "var(--text-2)" }}>
-          {result.summary}
-        </div>
+        <>
+          <div className="text-[13px]" style={{ color: "var(--text-2)" }}>
+            {result.summary}
+          </div>
+          <button
+            type="button"
+            onClick={() => setResult(null)}
+            className="mt-2 text-[12px] font-semibold"
+            style={{ color: "var(--accent)" }}
+          >
+            닫기
+          </button>
+        </>
       )}
 
       {result && result.items.length > 0 && (
         <>
           <p className="text-[13px] font-semibold">{result.summary}</p>
           <ul className="mt-2 space-y-1">
-            {result.items.slice(0, 8).map((item, i) => (
+            {result.items.slice(0, 10).map((item, i) => (
               <li
                 key={i}
                 className="text-[13px] flex justify-between gap-2"
@@ -144,12 +155,12 @@ export default function MenuExtractor({ restaurantId, imageId, appendNote }: Pro
           <div className="flex gap-2 mt-3">
             <button
               type="button"
-              onClick={applyToMemo}
+              onClick={save}
               disabled={pending || applied}
               className="flex-1 h-9 rounded-xl text-white text-[13px] font-bold disabled:opacity-50"
               style={{ background: "var(--accent)" }}
             >
-              {applied ? "메모에 추가됨 ✓" : pending ? "추가 중…" : "메모에 추가"}
+              {applied ? "저장됨 ✓" : pending ? "저장 중…" : "메뉴로 저장"}
             </button>
             <button
               type="button"

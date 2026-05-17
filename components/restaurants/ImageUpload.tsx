@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { RestaurantImage } from "@/lib/types";
 import Lightbox from "./Lightbox";
 import MenuExtractor from "./MenuExtractor";
+import type { MenuData } from "@/app/(main)/restaurants/[id]/menu-action";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
@@ -21,7 +22,7 @@ interface Props {
   images: RestaurantImage[];
   currentCategory: string | null;
   applyCategory: (restaurantId: string, category: string) => Promise<void>;
-  appendNote: (restaurantId: string, addition: string) => Promise<void>;
+  saveMenu: (restaurantId: string, menu: MenuData) => Promise<void>;
 }
 
 export default function ImageUpload({
@@ -29,7 +30,7 @@ export default function ImageUpload({
   images: initialImages,
   currentCategory,
   applyCategory,
-  appendNote,
+  saveMenu,
 }: Props) {
   const [images, setImages] = useState(initialImages);
   const [uploading, setUploading] = useState(false);
@@ -156,7 +157,7 @@ export default function ImageUpload({
             <MenuExtractor
               restaurantId={restaurantId}
               imageId={(images.find((i) => i.is_primary) ?? images[0]).id}
-              appendNote={appendNote}
+              saveMenu={saveMenu}
             />
           )}
           {!currentCategory && images.length > 0 && !suggestion && !analyzing && (

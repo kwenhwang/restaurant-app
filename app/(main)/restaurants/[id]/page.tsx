@@ -10,6 +10,7 @@ import { categoryStyle } from "@/lib/category-icons";
 import { ensureShareToken } from "./share-action";
 import { applyCategory } from "./category-action";
 import { appendNote } from "./note-action";
+import { saveMenu } from "./menu-action";
 import AddVisit from "@/components/visits/AddVisit";
 import VisitList from "@/components/visits/VisitList";
 import Sym from "@/components/ui/Sym";
@@ -205,10 +206,64 @@ export default async function RestaurantDetailPage({
             images={restaurant.images ?? []}
             currentCategory={restaurant.category ?? null}
             applyCategory={applyCategory}
-            appendNote={appendNote}
+            saveMenu={saveMenu}
           />
         </div>
       </section>
+
+      {/* Menu */}
+      {restaurant.menu && restaurant.menu.items && restaurant.menu.items.length > 0 && (
+        <section className="px-4">
+          <SectionHeader>메뉴</SectionHeader>
+          <div className="bg-white rounded-2xl overflow-hidden">
+            {restaurant.menu.summary && (
+              <div
+                className="px-4 py-3 text-[13px]"
+                style={{
+                  background: "var(--accent-soft)",
+                  color: "var(--text)",
+                }}
+              >
+                {restaurant.menu.summary}
+              </div>
+            )}
+            <ul>
+              {restaurant.menu.items.map(
+                (item: { name: string; price: string | null }, i: number) => (
+                  <li
+                    key={i}
+                    className="flex justify-between items-baseline gap-2 px-4 py-2.5"
+                    style={{
+                      borderTop: i > 0 ? "1px solid var(--separator)" : "none",
+                    }}
+                  >
+                    <span className="text-[15px] truncate">{item.name}</span>
+                    {item.price && (
+                      <span
+                        className="text-[14px] font-semibold shrink-0"
+                        style={{ color: "var(--text-2)" }}
+                      >
+                        {item.price}
+                      </span>
+                    )}
+                  </li>
+                )
+              )}
+            </ul>
+            {restaurant.menu.price_range && (
+              <div
+                className="px-4 py-2.5 text-[12px] font-mono"
+                style={{
+                  borderTop: "1px solid var(--separator)",
+                  color: "var(--text-2)",
+                }}
+              >
+                가격대: {restaurant.menu.price_range}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Info */}
       <section className="px-4">
