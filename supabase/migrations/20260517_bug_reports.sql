@@ -28,3 +28,6 @@ drop policy if exists "bug_reports_select_own" on public.bug_reports;
 create policy "bug_reports_select_own"
   on public.bug_reports for select
   using (auth.uid() = user_id);
+
+-- Grant table privileges to the authenticated role (RLS still gates rows)
+grant select, insert on public.bug_reports to authenticated;
