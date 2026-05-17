@@ -338,143 +338,152 @@ export default function CaptureFlow() {
         />
       </div>
 
-      {/* Candidates */}
-      {coord && (mineNearby.length > 0 || kakaoNearby.length > 0) && (
-        <div className="px-4 mt-3 space-y-2 flex-1 overflow-y-auto pb-32">
-          {mineNearby.length > 0 && (
-            <>
-              <SectionLabel>이미 등록한 가게 (재방문)</SectionLabel>
-              {mineNearby.map((r) => {
-                const isPicked = picked?.kind === "mine" && picked.r.id === r.id;
-                return (
-                  <Candidate
-                    key={"mine-" + r.id}
-                    title={r.name}
-                    subtitle={`${r.distance.toFixed(0)}m · ${r.category ?? "?"}`}
-                    badge="다시 방문"
-                    selected={isPicked}
-                    onClick={() => setPicked({ kind: "mine", r })}
-                    image={(() => {
-                      const p = r.images?.find((i) => i.is_primary) ?? r.images?.[0];
-                      return p ? `${IMAGE_BASE}/${p.storage_path}` : null;
-                    })()}
-                  />
-                );
-              })}
-            </>
-          )}
+      {/* Candidate list + manual entry + rating + memo always visible */}
+      <div className="px-4 mt-3 space-y-2 flex-1 pb-32">
+        {mineNearby.length > 0 && (
+          <>
+            <SectionLabel>이미 등록한 가게 (재방문)</SectionLabel>
+            {mineNearby.map((r) => {
+              const isPicked = picked?.kind === "mine" && picked.r.id === r.id;
+              return (
+                <Candidate
+                  key={"mine-" + r.id}
+                  title={r.name}
+                  subtitle={`${r.distance.toFixed(0)}m · ${r.category ?? "?"}`}
+                  badge="다시 방문"
+                  selected={isPicked}
+                  onClick={() => setPicked({ kind: "mine", r })}
+                  image={(() => {
+                    const p = r.images?.find((i) => i.is_primary) ?? r.images?.[0];
+                    return p ? `${IMAGE_BASE}/${p.storage_path}` : null;
+                  })()}
+                />
+              );
+            })}
+          </>
+        )}
 
-          {kakaoNearby.length > 0 && (
-            <>
-              <SectionLabel>주변 가게</SectionLabel>
-              {kakaoNearby.slice(0, 10).map((r) => {
-                const isPicked = picked?.kind === "kakao" && picked.r.kakaoId === r.kakaoId;
-                // Hide places already in user's list (matched by similar name + close)
-                const alreadyMine = mineNearby.some(
-                  (m) => m.name === r.name && Math.abs((m.lat ?? 0) - r.lat) < 0.0005
-                );
-                if (alreadyMine) return null;
-                return (
-                  <Candidate
-                    key={"k-" + r.kakaoId}
-                    title={r.name}
-                    subtitle={`${r.distance}m · ${r.category}`}
-                    selected={isPicked}
-                    onClick={() => setPicked({ kind: "kakao", r })}
-                  />
-                );
-              })}
-            </>
-          )}
+        {kakaoNearby.length > 0 && (
+          <>
+            <SectionLabel>주변 가게</SectionLabel>
+            {kakaoNearby.slice(0, 10).map((r) => {
+              const isPicked = picked?.kind === "kakao" && picked.r.kakaoId === r.kakaoId;
+              const alreadyMine = mineNearby.some(
+                (m) => m.name === r.name && Math.abs((m.lat ?? 0) - r.lat) < 0.0005
+              );
+              if (alreadyMine) return null;
+              return (
+                <Candidate
+                  key={"k-" + r.kakaoId}
+                  title={r.name}
+                  subtitle={`${r.distance}m · ${r.category}`}
+                  selected={isPicked}
+                  onClick={() => setPicked({ kind: "kakao", r })}
+                />
+              );
+            })}
+          </>
+        )}
 
-          <SectionLabel>그 외</SectionLabel>
-          <div
-            className="rounded-2xl p-3 flex items-center gap-3"
-            style={{
-              background: picked?.kind === "manual" ? "var(--accent-soft)" : "var(--bg)",
-            }}
-          >
-            <input
-              type="text"
-              value={manualName}
-              onChange={(e) => {
-                setManualName(e.target.value);
-                if (e.target.value) setPicked({ kind: "manual", name: e.target.value });
-                else if (picked?.kind === "manual") setPicked(null);
-              }}
-              placeholder="직접 이름 입력"
-              className="flex-1 bg-transparent outline-none text-[14px]"
-              style={{ color: "var(--text)" }}
-            />
-          </div>
-
-          {/* Optional rating */}
-          {picked && (
-            <div className="rounded-2xl p-4 bg-white" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
-              <div className="text-[13px] font-semibold mb-2" style={{ color: "var(--text-2)" }}>
-                평점 (선택)
-              </div>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setRating(rating === n ? null : n)}
-                    className="flex-1 h-11 rounded-xl text-[20px]"
-                    style={{
-                      background:
-                        rating !== null && n <= rating ? "var(--accent-soft)" : "var(--bg)",
-                      color: rating !== null && n <= rating ? "var(--accent)" : "var(--text-3)",
-                    }}
-                  >
-                    ★
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {picked && (
-            <div className="rounded-2xl p-4 bg-white" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
-              <div className="text-[13px] font-semibold mb-1" style={{ color: "var(--text-2)" }}>
-                한 줄 메모 (선택)
-              </div>
-              <input
-                type="text"
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                placeholder={analysis?.description ?? "어땠어요?"}
-                className="w-full bg-transparent outline-none text-[15px]"
-                style={{ color: "var(--text)" }}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Save bar */}
-      {picked && (
+        {/* Manual entry — ALWAYS visible so user can register anywhere */}
+        <SectionLabel>
+          {mineNearby.length === 0 && kakaoNearby.length === 0
+            ? "가게 이름 직접 입력"
+            : "직접 입력"}
+        </SectionLabel>
         <div
-          className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3 pb-6"
+          className="rounded-2xl p-3.5 flex items-center gap-3"
           style={{
-            background: "linear-gradient(to top, var(--bg) 0%, var(--bg) 70%, transparent 100%)",
+            background: picked?.kind === "manual" ? "var(--accent-soft)" : "white",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+            border:
+              picked?.kind === "manual"
+                ? "1.5px solid var(--accent)"
+                : "1.5px solid transparent",
           }}
         >
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full h-[54px] rounded-2xl text-white text-[17px] font-bold disabled:opacity-50"
-            style={{ background: "var(--accent)", boxShadow: "0 8px 20px rgba(255,111,61,0.28)" }}
-          >
-            {saving
+          <span style={{ color: "var(--text-2)" }}>✏️</span>
+          <input
+            type="text"
+            value={manualName}
+            onChange={(e) => {
+              setManualName(e.target.value);
+              if (e.target.value) setPicked({ kind: "manual", name: e.target.value });
+              else if (picked?.kind === "manual") setPicked(null);
+            }}
+            placeholder="가게 이름을 적어 주세요"
+            className="flex-1 bg-transparent outline-none text-[15px]"
+            style={{ color: "var(--text)" }}
+          />
+        </div>
+
+        {/* Rating — always visible */}
+        <div className="rounded-2xl p-4 bg-white mt-3" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+          <div className="text-[13px] font-semibold mb-2" style={{ color: "var(--text-2)" }}>
+            평점 (선택)
+          </div>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setRating(rating === n ? null : n)}
+                className="flex-1 h-11 rounded-xl text-[20px]"
+                style={{
+                  background:
+                    rating !== null && n <= rating ? "var(--accent-soft)" : "var(--bg)",
+                  color: rating !== null && n <= rating ? "var(--accent)" : "var(--text-3)",
+                }}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Memo — always visible */}
+        <div className="rounded-2xl p-4 bg-white" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+          <div className="text-[13px] font-semibold mb-1" style={{ color: "var(--text-2)" }}>
+            한 줄 메모 (선택)
+          </div>
+          <input
+            type="text"
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder={analysis?.description ?? "어땠어요?"}
+            className="w-full bg-transparent outline-none text-[15px]"
+            style={{ color: "var(--text)" }}
+          />
+        </div>
+      </div>
+
+      {/* Save bar — always visible, disabled if no pick */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3 pb-6"
+        style={{
+          background: "linear-gradient(to top, var(--bg) 0%, var(--bg) 70%, transparent 100%)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !picked}
+          className="w-full h-[54px] rounded-2xl text-white text-[17px] font-bold transition-opacity"
+          style={{
+            background: picked ? "var(--accent)" : "var(--text-3)",
+            boxShadow: picked ? "0 8px 20px rgba(255,111,61,0.28)" : "none",
+            opacity: !picked || saving ? 0.6 : 1,
+          }}
+        >
+          {!picked
+            ? "가게를 선택하거나 이름을 적어 주세요"
+            : saving
               ? "저장 중…"
               : picked.kind === "mine"
                 ? "다시 방문 기록"
                 : "맛집 등록"}
-          </button>
-        </div>
-      )}
+        </button>
+      </div>
     </div>
   );
 }

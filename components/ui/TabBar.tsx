@@ -17,8 +17,17 @@ const ITEMS: Item[] = [
   { href: "/profile", label: "프로필", icon: "person" },
 ];
 
+// Routes that have their own sticky save bar / dedicated flow.
+// We hide the TabBar + floating + button on these so the screen stays uncluttered.
+const HIDDEN_ON = ["/capture", "/restaurants/new", "/share-receive"];
+
 export default function TabBar() {
   const pathname = usePathname();
+
+  if (HIDDEN_ON.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    return null;
+  }
+  if (pathname.match(/^\/restaurants\/[^/]+\/edit$/)) return null;
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -38,7 +47,7 @@ export default function TabBar() {
           height: 64,
           background: "var(--accent)",
           boxShadow:
-            "0 14px 28px rgba(255,111,61,0.5), 0 4px 10px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4)",
+            "0 6px 16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.4)",
         }}
       >
         <Sym name="plus" size={30} strokeWidth={2.6} />
