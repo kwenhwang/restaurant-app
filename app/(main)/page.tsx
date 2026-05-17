@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import RestaurantCard from "@/components/restaurants/RestaurantCard";
+import HomeFilters from "@/components/home/HomeFilters";
 import { LargeTitle } from "@/components/ui/LargeTitle";
-import { Chip } from "@/components/ui/Chip";
 import FAB from "@/components/ui/FAB";
 import Sym from "@/components/ui/Sym";
 
-const CATEGORIES = ["전체", "한식", "일식", "카페", "양식", "술집", "디저트"];
+const DEFAULT_CATEGORIES = ["전체", "한식", "일식", "중식", "양식", "카페", "술집", "기타"];
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -16,17 +15,24 @@ export default async function HomePage() {
 
   const { data: restaurants } = await supabase
     .from("restaurants")
-    .select("*, images:restaurant_images(id, storage_path, is_primary)")
+    .select("id, name, address, category, rating, created_at, images:restaurant_images(id, storage_path, is_primary)")
     .eq("user_id", user!.id)
     .order("created_at", { ascending: false });
 
-  const count = restaurants?.length ?? 0;
-  const thisMonth =
-    restaurants?.filter((r) => {
-      const d = new Date(r.created_at);
-      const now = new Date();
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }).length ?? 0;
+  const list = restaurants ?? [];
+  const count = list.length;
+  const now = new Date();
+  const thisMonth = list.filter((r) => {
+    if (!r.created_at) return false;
+    const d = new Date(r.created_at);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  // Categories from actual data + defaults (de-duped, "전체" first)
+  const usedCategories = Array.from(
+    new Set(list.map((r) => r.category).filter(Boolean) as string[])
+  );
+  const categories = ["전체", ...new Set([...DEFAULT_CATEGORIES.slice(1), ...usedCategories])];
 
   return (
     <>
@@ -50,63 +56,9 @@ export default async function HomePage() {
         }
       />
 
-      {/* Search */}
-      <div className="px-5 pb-3">
-        <div
-          className="h-10 rounded-[12px] flex items-center gap-1.5 px-2.5"
-          style={{ background: "rgba(118,118,128,0.12)", color: "var(--text-2)" }}
-        >
-          <Sym name="magnifyingglass" size={17} />
-          <span className="text-[15px]">가게 이름, 카테고리</span>
-        </div>
-      </div>
-
-      {/* Filter chips */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 pb-3.5">
-        {CATEGORIES.map((c, i) => (
-          <Chip key={c} active={i === 0}>
-            {c}
-          </Chip>
-        ))}
-      </div>
-
-      {/* Cards */}
-      {restaurants && restaurants.length > 0 ? (
-        <div className="px-4 flex flex-col gap-2.5">
-          {restaurants.map((r) => (
-            <RestaurantCard key={r.id} restaurant={r} />
-          ))}
-        </div>
-      ) : (
-        <EmptyState />
-      )}
+      <HomeFilters restaurants={list} categories={categories} />
 
       <FAB />
     </>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center text-center py-20 px-8">
-      <div
-        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-        style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-      >
-        <Sym name="fork.knife" size={28} strokeWidth={2} />
-      </div>
-      <h2 className="text-[17px] font-bold">아직 기록된 맛집이 없어요</h2>
-      <p className="text-[14px] mt-1.5 max-w-[260px]" style={{ color: "var(--text-2)" }}>
-        오늘 다녀온 그 가게부터 한 곳씩, 나만의 미식 지도를 만들어 보세요.
-      </p>
-      <Link
-        href="/restaurants/new"
-        className="mt-6 inline-flex items-center gap-1.5 h-11 px-5 rounded-full text-[15px] font-semibold text-white"
-        style={{ background: "var(--accent)" }}
-      >
-        <Sym name="plus" size={16} strokeWidth={2.4} />
-        첫 번째 맛집 추가
-      </Link>
-    </div>
   );
 }

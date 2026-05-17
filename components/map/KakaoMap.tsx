@@ -23,15 +23,31 @@ const STARS = ["", "★", "★★", "★★★", "★★★★", "★★★★�
 export default function KakaoMap({ restaurants }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<MarkerData | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const mapInstance = useRef<KakaoMapInstance | null>(null);
 
   useEffect(() => {
     const script = document.createElement("script");
     script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY}&autoload=false`;
     script.async = true;
-    document.head.appendChild(script);
+
+    const timeout = setTimeout(() => {
+      if (!window.kakao?.maps) {
+        setError("지도 SDK를 불러올 수 없어요");
+      }
+    }, 6000);
+
+    script.onerror = () => {
+      clearTimeout(timeout);
+      setError("지도 SDK 로드 실패");
+    };
 
     script.onload = () => {
+      clearTimeout(timeout);
+      if (!window.kakao?.maps) {
+        setError("이 도메인은 카카오 개발자 콘솔에 등록되지 않았어요");
+        return;
+      }
       window.kakao.maps.load(() => {
         if (!mapRef.current) return;
 
@@ -58,43 +74,73 @@ export default function KakaoMap({ restaurants }: Props) {
       });
     };
 
+    document.head.appendChild(script);
+
     return () => {
-      document.head.removeChild(script);
+      clearTimeout(timeout);
+      if (script.parentNode) document.head.removeChild(script);
     };
   }, [restaurants]);
 
   return (
-    <div className="relative">
-      <div ref={mapRef} className="w-full h-[60vh] rounded-xl overflow-hidden border" />
+    <div className="relative h-full">
+      <div ref={mapRef} className="w-full h-full" />
 
-      {restaurants.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-xl">
-          <p className="text-sm text-gray-400">좌표가 있는 맛집이 없어요</p>
+      {error && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center"
+          style={{ background: "var(--bg)" }}
+        >
+          <div className="text-[15px] font-semibold">{error}</div>
+          <p className="text-[13px] mt-1.5" style={{ color: "var(--text-2)" }}>
+            카카오 개발자 콘솔 → Web 플랫폼에 도메인을 추가해 주세요
+          </p>
         </div>
       )}
 
       {selected && (
-        <div className="mt-3 bg-white rounded-xl border p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <Link href={`/restaurants/${selected.id}`} className="font-semibold text-gray-900 hover:text-orange-500">
+        <div
+          className="absolute left-3 right-3 bottom-3 rounded-2xl bg-white p-4"
+          style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <Link
+                href={`/restaurants/${selected.id}`}
+                className="text-[16px] font-bold truncate block"
+              >
                 {selected.name}
               </Link>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-1.5 mt-1">
                 {selected.category && (
-                  <span className="text-xs bg-gray-100 text-gray-600 rounded px-2 py-0.5">
+                  <span
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                    style={{ background: "var(--bg)", color: "var(--text-2)" }}
+                  >
                     {selected.category}
                   </span>
                 )}
                 {selected.rating && (
-                  <span className="text-orange-400 text-xs">{STARS[selected.rating]}</span>
+                  <span className="text-[12px]" style={{ color: "var(--accent)" }}>
+                    {STARS[selected.rating]}
+                  </span>
                 )}
               </div>
               {selected.address && (
-                <p className="text-xs text-gray-400 mt-1">{selected.address}</p>
+                <p className="text-[12px] mt-1" style={{ color: "var(--text-2)" }}>
+                  {selected.address}
+                </p>
               )}
             </div>
-            <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              aria-label="닫기"
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: "var(--bg)" }}
+            >
+              ×
+            </button>
           </div>
         </div>
       )}

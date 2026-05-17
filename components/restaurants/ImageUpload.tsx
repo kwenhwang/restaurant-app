@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { RestaurantImage } from "@/lib/types";
+import Lightbox from "./Lightbox";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
@@ -15,6 +16,7 @@ interface Props {
 export default function ImageUpload({ restaurantId, images: initialImages }: Props) {
   const [images, setImages] = useState(initialImages);
   const [uploading, setUploading] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -97,45 +99,58 @@ export default function ImageUpload({ restaurantId, images: initialImages }: Pro
 
       {images.length > 0 ? (
         <div className="grid grid-cols-3 gap-1.5">
-          {images.map((img) => (
+          {images.map((img, i) => (
             <div
               key={img.id}
               className="relative group aspect-square rounded-xl overflow-hidden"
               style={{ background: "var(--bg)" }}
             >
-              <Image
-                src={`${IMAGE_BASE}/${img.storage_path}`}
-                alt=""
-                fill
-                sizes="(max-width: 768px) 33vw, 200px"
-                className="object-cover"
-                unoptimized
-              />
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(i)}
+                className="absolute inset-0"
+                aria-label="사진 크게 보기"
+              >
+                <Image
+                  src={`${IMAGE_BASE}/${img.storage_path}`}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 33vw, 200px"
+                  className="object-cover"
+                />
+              </button>
               {img.is_primary && (
                 <span
-                  className="absolute top-1.5 left-1.5 text-[11px] font-semibold text-white px-2 py-0.5 rounded-full"
+                  className="absolute top-1.5 left-1.5 text-[11px] font-semibold text-white px-2 py-0.5 rounded-full pointer-events-none"
                   style={{ background: "var(--accent)" }}
                 >
                   대표
                 </span>
               )}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              <div className="absolute bottom-1.5 right-1.5 flex gap-1">
                 {!img.is_primary && (
                   <button
                     type="button"
-                    onClick={() => handleSetPrimary(img.id)}
-                    className="text-[11px] bg-white text-gray-800 px-2 py-1 rounded-full font-semibold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSetPrimary(img.id);
+                    }}
+                    className="text-[10px] bg-white/90 backdrop-blur text-gray-800 px-2 py-1 rounded-full font-semibold"
                   >
                     대표
                   </button>
                 )}
                 <button
                   type="button"
-                  onClick={() => handleDelete(img)}
-                  className="text-[11px] text-white px-2 py-1 rounded-full font-semibold"
-                  style={{ background: "#FF3B30" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(img);
+                  }}
+                  aria-label="삭제"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[14px] font-bold"
+                  style={{ background: "rgba(255,59,48,0.92)" }}
                 >
-                  삭제
+                  ×
                 </button>
               </div>
             </div>
@@ -145,6 +160,14 @@ export default function ImageUpload({ restaurantId, images: initialImages }: Pro
         <p className="text-[14px] text-center py-6" style={{ color: "var(--text-2)" }}>
           사진이 없어요
         </p>
+      )}
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          images={images}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
     </div>
   );
