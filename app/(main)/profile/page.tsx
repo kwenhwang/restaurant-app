@@ -44,10 +44,8 @@ export default async function ProfilePage() {
       </section>
 
       <section className="px-4 pt-5">
-        <SectionHeader>계정</SectionHeader>
-        <Group>
-          <ListRow icon="person" label="이메일" detail={user?.email ?? "—"} />
-        </Group>
+        <SectionHeader>앱</SectionHeader>
+        <InstallButton />
       </section>
 
       <section className="px-4 pt-5">
@@ -76,13 +74,18 @@ export default async function ProfilePage() {
         </Group>
       </section>
 
-      <section className="px-4 pt-5 space-y-2">
-        <InstallButton />
-        <LogoutButton />
-      </section>
-
-      <section className="px-4 pt-3">
-        <DeleteAccountButton deleteAccount={deleteAccount} />
+      {/* 계정 — 이메일·로그아웃·계정 삭제 한 곳에 모음 */}
+      <section className="px-4 pt-5">
+        <SectionHeader>계정</SectionHeader>
+        <Group>
+          <ListRow icon="person" label="이메일" detail={user?.email ?? "—"} />
+        </Group>
+        <div className="mt-2">
+          <LogoutButton />
+        </div>
+        <div className="mt-1">
+          <DeleteAccountButton deleteAccount={deleteAccount} />
+        </div>
       </section>
     </>
   );
