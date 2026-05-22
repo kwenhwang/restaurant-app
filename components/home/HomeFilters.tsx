@@ -1,3 +1,6 @@
+// components/home/HomeFilters.tsx — v2
+// Adds a mood-tag filter row beneath the category chips.
+
 "use client";
 
 import { useMemo, useState } from "react";
@@ -20,26 +23,36 @@ export interface RestaurantItem {
   is_favorite?: boolean;
   created_at?: string;
   images?: Image[];
+
+  // v2 derived
+  visit_count?: number;
+  last_visit?: string | null;
+  tags?: string[];
+  rank?: number;
 }
 
 interface Props {
   restaurants: RestaurantItem[];
   categories: string[];
+  popularTags?: string[];
 }
 
-type Sort = "recent" | "rating" | "name";
+type Sort = "recent" | "rating" | "name" | "rank" | "visits";
 
 const SORT_LABEL: Record<Sort, string> = {
+  rank: "순위",
   recent: "최신순",
   rating: "평점순",
+  visits: "방문순",
   name: "이름순",
 };
 
-export default function HomeFilters({ restaurants, categories }: Props) {
+export default function HomeFilters({ restaurants, categories, popularTags = [] }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("전체");
+  const [tag, setTag] = useState<string | null>(null);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [sort, setSort] = useState<Sort>("recent");
+  const [sort, setSort] = useState<Sort>("rank");
   const [sortOpen, setSortOpen] = useState(false);
 
   const filtered = useMemo(() => {
@@ -53,13 +66,18 @@ export default function HomeFilters({ restaurants, categories }: Props) {
       list = list.filter((r) => r.category === category);
     }
 
+    if (tag) {
+      list = list.filter((r) => r.tags?.includes(tag));
+    }
+
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(
         (r) =>
           r.name.toLowerCase().includes(q) ||
           (r.address ?? "").toLowerCase().includes(q) ||
-          (r.category ?? "").toLowerCase().includes(q)
+          (r.category ?? "").toLowerCase().includes(q) ||
+          (r.tags ?? []).some((t) => t.toLowerCase().includes(q))
       );
     }
 
@@ -68,11 +86,15 @@ export default function HomeFilters({ restaurants, categories }: Props) {
       sorted.sort((a, b) => a.name.localeCompare(b.name, "ko"));
     } else if (sort === "rating") {
       sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    } else if (sort === "visits") {
+      sorted.sort((a, b) => (b.visit_count ?? 0) - (a.visit_count ?? 0));
+    } else if (sort === "rank") {
+      sorted.sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity));
     } else {
       sorted.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     }
     return sorted;
-  }, [restaurants, query, category, favoritesOnly, sort]);
+  }, [restaurants, query, category, tag, favoritesOnly, sort]);
 
   const favCount = restaurants.filter((r) => r.is_favorite).length;
 
@@ -91,7 +113,7 @@ export default function HomeFilters({ restaurants, categories }: Props) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="가게 이름, 주소, 카테고리"
+            placeholder="가게 이름, 주소, 분위기 태그"
             className="flex-1 bg-transparent outline-none text-[15px]"
             style={{ color: "var(--text)" }}
           />
@@ -109,8 +131,8 @@ export default function HomeFilters({ restaurants, categories }: Props) {
         </div>
       </div>
 
-      {/* Filter chips */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 pb-3.5 items-center">
+      {/* Category chips */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 pb-2 items-center">
         {favCount > 0 && (
           <button
             type="button"
@@ -204,6 +226,44 @@ export default function HomeFilters({ restaurants, categories }: Props) {
         </div>
       </div>
 
+      {/* Tag filter row — only shown if there's at least one tagged restaurant */}
+      {popularTags.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-5 pb-3.5 items-center">
+          <div
+            className="shrink-0 text-[11px] font-bold uppercase tracking-[0.4px]"
+            style={{ color: "var(--text-2)" }}
+          >
+            분위기
+          </div>
+          {popularTags.map((t) => {
+            const on = tag === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTag(on ? null : t)}
+                className="shrink-0 px-2.5 py-1 rounded-full text-[12.5px] font-semibold transition-colors"
+                style={
+                  on
+                    ? {
+                        background: "var(--accent-soft)",
+                        color: "var(--accent)",
+                        boxShadow: "inset 0 0 0 1px var(--accent)",
+                      }
+                    : {
+                        background: "#fff",
+                        color: "var(--text-2)",
+                        boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+                      }
+                }
+              >
+                #{t}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Results */}
       {filtered.length > 0 ? (
         <div className="px-4 flex flex-col gap-2.5">
@@ -211,37 +271,10 @@ export default function HomeFilters({ restaurants, categories }: Props) {
             <RestaurantCard key={r.id} restaurant={r} />
           ))}
         </div>
-      ) : restaurants.length === 0 ? (
-        <EmptyState />
       ) : (
-        <NoResults onClear={() => { setQuery(""); setCategory("전체"); }} />
+        <NoResults onClear={() => { setQuery(""); setCategory("전체"); setTag(null); setFavoritesOnly(false); }} />
       )}
     </>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center text-center py-20 px-8">
-      <div
-        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-        style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-      >
-        <Sym name="fork.knife" size={28} strokeWidth={2} />
-      </div>
-      <h2 className="text-[17px] font-bold">아직 기록된 맛집이 없어요</h2>
-      <p className="text-[14px] mt-1.5 max-w-[260px]" style={{ color: "var(--text-2)" }}>
-        오늘 다녀온 그 가게부터 한 곳씩, 나만의 미식 지도를 만들어 보세요.
-      </p>
-      <Link
-        href="/restaurants/new"
-        className="mt-6 inline-flex items-center gap-1.5 h-11 px-5 rounded-full text-[15px] font-semibold text-white"
-        style={{ background: "var(--accent)" }}
-      >
-        <Sym name="plus" size={16} strokeWidth={2.4} />
-        첫 번째 맛집 추가
-      </Link>
-    </div>
   );
 }
 
