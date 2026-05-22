@@ -9,10 +9,22 @@ import { createClient } from "@/lib/supabase/server";
  * Errors fall back to /login?error=... so the user sees feedback.
  */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
   const error = searchParams.get("error");
+
+  // Determine canonical site origin from (in order):
+  // 1. NEXT_PUBLIC_SITE_URL env (most reliable in self-hosted prod)
+  // 2. X-Forwarded-Host header (from nginx)
+  // 3. Host header
+  const envSite = process.env.NEXT_PUBLIC_SITE_URL;
+  const fwdHost = request.headers.get("x-forwarded-host");
+  const fwdProto = request.headers.get("x-forwarded-proto") ?? "https";
+  const host = request.headers.get("host");
+  const origin =
+    envSite ||
+    (fwdHost ? `${fwdProto}://${fwdHost}` : host ? `${fwdProto}://${host}` : request.nextUrl.origin);
 
   if (error) {
     const description = searchParams.get("error_description") ?? error;
