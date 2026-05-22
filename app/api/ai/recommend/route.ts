@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateJSON } from "@/lib/ai/gemini";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 interface Recommendation {
   restaurantId: string;
@@ -31,6 +32,10 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl = checkRateLimit({ key: `${user.id}:ai`, perMinute: 10, perDay: 100 });
+  const rlRes = rateLimitResponse(rl);
+  if (rlRes) return rlRes;
 
   // Optional GPS coords for distance-aware recommendation
   const sp = request.nextUrl.searchParams;

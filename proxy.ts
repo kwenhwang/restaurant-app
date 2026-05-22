@@ -32,7 +32,9 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
   const isPublicPage =
-    pathname.startsWith("/offline") || pathname.startsWith("/r/");
+    pathname.startsWith("/offline") ||
+    pathname.startsWith("/r/") ||
+    pathname.startsWith("/legal/");
 
   if (!user && !isAuthPage && !isPublicPage) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -47,6 +49,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/|manifest.json|sw.js|apple-touch-icon|icons/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/|manifest.json|sw.js|apple-touch-icon|icons/|robots.txt|sitemap.xml).*)",
   ],
 };

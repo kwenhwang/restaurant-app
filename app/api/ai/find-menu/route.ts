@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateGroundedJSON } from "@/lib/ai/gemini";
 import { normalizeName, bucketCoord } from "@/lib/place-cache";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 interface MenuResult {
   found: boolean;
@@ -31,6 +32,10 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+
+  const _rl = checkRateLimit({ key: `${user.id}:ai-find-menu`, perMinute: 3, perDay: 30 });
+  const _rlRes = rateLimitResponse(_rl);
+  if (_rlRes) return _rlRes;
   const body = await request.json().catch(() => ({}));
   const { restaurantId, force } = body;
   if (!restaurantId || typeof restaurantId !== "string") {

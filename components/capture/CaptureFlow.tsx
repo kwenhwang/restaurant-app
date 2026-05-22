@@ -6,6 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { categoryStyle } from "@/lib/category-icons";
+import { getLocationConsent } from "@/lib/location-consent";
+import LocationConsent from "@/components/ui/LocationConsent";
 import VoiceInput from "./VoiceInput";
 
 interface NearbyKakao {
@@ -74,8 +76,7 @@ export default function CaptureFlow() {
     };
   }, [previewUrl]);
 
-  // Request GPS as soon as page loads
-  useEffect(() => {
+  function requestGPS() {
     if (!navigator.geolocation) {
       setGeoError("이 브라우저는 위치 기능을 지원하지 않아요");
       return;
@@ -92,6 +93,16 @@ export default function CaptureFlow() {
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
+  }
+
+  // Request GPS only when user previously consented
+  useEffect(() => {
+    if (getLocationConsent() === "granted") {
+      requestGPS();
+    } else if (getLocationConsent() === "denied") {
+      setGeoError("위치 권한이 꺼져 있어요");
+    }
+    // 'unknown' → LocationConsent modal will appear, then onDecision triggers GPS
   }, []);
 
   // Fetch nearby places once we have coord
@@ -233,6 +244,12 @@ export default function CaptureFlow() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <LocationConsent
+        onDecision={(granted) => {
+          if (granted) requestGPS();
+          else setGeoError("위치 권한이 꺼져 있어요");
+        }}
+      />
       {/* Top bar */}
       <header className="flex items-center justify-between px-4 pt-3.5 pb-2.5">
         <Link

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateJSONWithImage } from "@/lib/ai/gemini";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 interface AnalysisResult {
   category: string;
@@ -18,6 +19,10 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+
+  const _rl = checkRateLimit({ key: `${user.id}:ai`, perMinute: 10, perDay: 100 });
+  const _rlRes = rateLimitResponse(_rl);
+  if (_rlRes) return _rlRes;
   const formData = await request.formData();
   const file = formData.get("file");
   if (!(file instanceof File)) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateJSONWithImage } from "@/lib/ai/gemini";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 interface AnalysisResult {
   category: string;        // 한식·중식·일식·양식·카페·술집·디저트·기타
@@ -19,6 +20,10 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rl = checkRateLimit({ key: `${user.id}:ai`, perMinute: 10, perDay: 100 });
+  const rlRes = rateLimitResponse(rl);
+  if (rlRes) return rlRes;
 
   const { imageId } = await request.json().catch(() => ({}));
   if (!imageId || typeof imageId !== "string") {
