@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const securityHeaders = [
   {
@@ -12,7 +13,7 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "geolocation=(self), microphone=(self), camera=(self), payment=()",
   },
-  // CSP: allow self + Kakao Maps + MinIO image host + Google search redirects (grounding sources)
+  // CSP: allow self + Kakao Maps + MinIO image host + Sentry + Gemini
   {
     key: "Content-Security-Policy",
     value: [
@@ -21,7 +22,8 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://sword33.duckdns.org https://*.daumcdn.net https://t1.daumcdn.net",
       "font-src 'self' data:",
-      "connect-src 'self' https://sword33.duckdns.org https://dapi.kakao.com https://generativelanguage.googleapis.com",
+      "connect-src 'self' https://sword33.duckdns.org https://dapi.kakao.com https://generativelanguage.googleapis.com https://*.ingest.sentry.io",
+      "worker-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -54,4 +56,12 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Only run Sentry build steps when DSN is configured.
+  silent: !process.env.NEXT_PUBLIC_SENTRY_DSN,
+  // Source map upload requires an auth token; skip for now.
+  widenClientFileUpload: true,
+  disableLogger: true,
+  // Tunnel requests through our own domain to avoid ad-blocker false positives.
+  tunnelRoute: "/monitoring",
+});
