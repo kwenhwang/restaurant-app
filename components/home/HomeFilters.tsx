@@ -1,11 +1,13 @@
-// components/home/HomeFilters.tsx — v2
-// Adds a mood-tag filter row beneath the category chips.
+// components/home/HomeFilters.tsx — v3
+// Keeps all v2 filter logic (search · category · mood tag · favorites · sort).
+// New: editorial section rails (HomeSections) above the feed when no filter is
+// active, and the photo-forward RestaurantCard list (A1/A3).
 
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import RestaurantCard from "@/components/restaurants/RestaurantCard";
+import HomeSections from "@/components/home/HomeSections";
 import Sym from "@/components/ui/Sym";
 
 interface Image {
@@ -23,8 +25,6 @@ export interface RestaurantItem {
   is_favorite?: boolean;
   created_at?: string;
   images?: Image[];
-
-  // v2 derived
   visit_count?: number;
   last_visit?: string | null;
   tags?: string[];
@@ -55,21 +55,14 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
   const [sort, setSort] = useState<Sort>("rank");
   const [sortOpen, setSortOpen] = useState(false);
 
+  const isFiltering =
+    favoritesOnly || category !== "전체" || !!tag || query.trim().length > 0;
+
   const filtered = useMemo(() => {
     let list = restaurants;
-
-    if (favoritesOnly) {
-      list = list.filter((r) => r.is_favorite);
-    }
-
-    if (category !== "전체") {
-      list = list.filter((r) => r.category === category);
-    }
-
-    if (tag) {
-      list = list.filter((r) => r.tags?.includes(tag));
-    }
-
+    if (favoritesOnly) list = list.filter((r) => r.is_favorite);
+    if (category !== "전체") list = list.filter((r) => r.category === category);
+    if (tag) list = list.filter((r) => r.tags?.includes(tag));
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(
@@ -80,31 +73,29 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
           (r.tags ?? []).some((t) => t.toLowerCase().includes(q))
       );
     }
-
     const sorted = [...list];
-    if (sort === "name") {
-      sorted.sort((a, b) => a.name.localeCompare(b.name, "ko"));
-    } else if (sort === "rating") {
-      sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-    } else if (sort === "visits") {
-      sorted.sort((a, b) => (b.visit_count ?? 0) - (a.visit_count ?? 0));
-    } else if (sort === "rank") {
-      sorted.sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity));
-    } else {
-      sorted.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
-    }
+    if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    else if (sort === "rating") sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    else if (sort === "visits") sorted.sort((a, b) => (b.visit_count ?? 0) - (a.visit_count ?? 0));
+    else if (sort === "rank") sorted.sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity));
+    else sorted.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     return sorted;
   }, [restaurants, query, category, tag, favoritesOnly, sort]);
+
+  const recent = useMemo(
+    () => [...restaurants].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? "")),
+    [restaurants]
+  );
 
   const favCount = restaurants.filter((r) => r.is_favorite).length;
 
   return (
     <>
       {/* Search */}
-      <div className="px-5 pb-3">
+      <div className="px-[18px] pb-2.5">
         <div
-          className="h-10 rounded-[12px] flex items-center gap-1.5 px-2.5"
-          style={{ background: "rgba(118,118,128,0.12)" }}
+          className="h-[42px] rounded-[13px] flex items-center gap-2 px-3"
+          style={{ background: "color-mix(in srgb, var(--text) 7%, transparent)" }}
         >
           <span style={{ color: "var(--text-2)" }}>
             <Sym name="magnifyingglass" size={17} />
@@ -131,22 +122,17 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
         </div>
       </div>
 
-      {/* Category chips */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 pb-2 items-center">
+      {/* Category chips + sort */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar px-[18px] pb-2 items-center">
         {favCount > 0 && (
           <button
             type="button"
             onClick={() => setFavoritesOnly((v) => !v)}
-            className="shrink-0 px-3 py-2 rounded-full text-[14px] font-semibold flex items-center gap-1 transition-colors"
+            className="shrink-0 px-3 py-2 rounded-full text-[14px] font-bold flex items-center gap-1 transition-colors"
             style={
               favoritesOnly
                 ? { background: "var(--accent)", color: "#fff" }
-                : {
-                    background: "#fff",
-                    color: "var(--accent)",
-                    boxShadow:
-                      "0 1px 2px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(0,0,0,0.06)",
-                  }
+                : { background: "var(--surface)", color: "var(--accent)", boxShadow: "0 1px 2px rgba(0,0,0,0.04), inset 0 0 0 0.5px var(--separator)" }
             }
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
@@ -162,16 +148,11 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
               key={c}
               type="button"
               onClick={() => setCategory(c)}
-              className="shrink-0 px-3.5 py-2 rounded-full text-[14px] font-semibold transition-colors"
+              className="shrink-0 px-3.5 py-2 rounded-full text-[14px] font-bold transition-colors"
               style={
                 active
-                  ? { background: "var(--text)", color: "#fff" }
-                  : {
-                      background: "#fff",
-                      color: "var(--text)",
-                      boxShadow:
-                        "0 1px 2px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(0,0,0,0.06)",
-                    }
+                  ? { background: "var(--text)", color: "var(--bg)" }
+                  : { background: "var(--surface)", color: "var(--text)", boxShadow: "0 1px 2px rgba(0,0,0,0.04), inset 0 0 0 0.5px var(--separator)" }
               }
             >
               {c}
@@ -183,41 +164,28 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
           <button
             type="button"
             onClick={() => setSortOpen((v) => !v)}
-            className="px-3.5 py-2 rounded-full text-[13px] font-semibold flex items-center gap-1"
-            style={{
-              background: "#fff",
-              color: "var(--text-2)",
-              boxShadow:
-                "0 1px 2px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(0,0,0,0.06)",
-            }}
+            className="px-3.5 py-2 rounded-full text-[13px] font-bold flex items-center gap-1"
+            style={{ background: "var(--surface)", color: "var(--text-2)", boxShadow: "0 1px 2px rgba(0,0,0,0.04), inset 0 0 0 0.5px var(--separator)" }}
           >
             {SORT_LABEL[sort]}
-            <span style={{ fontSize: 9 }}>▼</span>
+            <Sym name="chevron.down" size={11} />
           </button>
           {sortOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setSortOpen(false)} />
               <div
-                className="absolute right-0 mt-1 z-40 rounded-2xl overflow-hidden bg-white"
-                style={{
-                  minWidth: 140,
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-                }}
+                className="absolute right-0 mt-1 z-40 rounded-2xl overflow-hidden"
+                style={{ minWidth: 140, background: "var(--surface)", boxShadow: "0 10px 30px rgba(0,0,0,0.15)" }}
               >
-                {(Object.keys(SORT_LABEL) as Sort[]).map((s) => (
+                {(Object.keys(SORT_LABEL) as Sort[]).map((sKey) => (
                   <button
-                    key={s}
+                    key={sKey}
                     type="button"
-                    onClick={() => {
-                      setSort(s);
-                      setSortOpen(false);
-                    }}
+                    onClick={() => { setSort(sKey); setSortOpen(false); }}
                     className="w-full text-left px-4 h-11 text-[14px] font-medium"
-                    style={{
-                      color: sort === s ? "var(--accent)" : "var(--text)",
-                    }}
+                    style={{ color: sort === sKey ? "var(--accent)" : "var(--text)" }}
                   >
-                    {SORT_LABEL[s]}
+                    {SORT_LABEL[sKey]}
                   </button>
                 ))}
               </div>
@@ -226,50 +194,56 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
         </div>
       </div>
 
-      {/* Tag filter row — only shown if there's at least one tagged restaurant */}
+      {/* Mood tag row */}
       {popularTags.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-5 pb-3.5 items-center">
-          <div
-            className="shrink-0 text-[11px] font-bold uppercase tracking-[0.4px]"
-            style={{ color: "var(--text-2)" }}
-          >
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-[18px] pb-3.5 items-center">
+          <div className="shrink-0 text-[11px] font-bold uppercase tracking-[0.4px]" style={{ color: "var(--text-2)" }}>
             분위기
           </div>
-          {popularTags.map((t) => {
-            const on = tag === t;
+          {popularTags.map((tg) => {
+            const on = tag === tg;
             return (
               <button
-                key={t}
+                key={tg}
                 type="button"
-                onClick={() => setTag(on ? null : t)}
-                className="shrink-0 px-2.5 py-1 rounded-full text-[12.5px] font-semibold transition-colors"
+                onClick={() => setTag(on ? null : tg)}
+                className="shrink-0 px-2.5 py-1 rounded-full text-[12.5px] font-bold transition-colors"
                 style={
                   on
-                    ? {
-                        background: "var(--accent-soft)",
-                        color: "var(--accent)",
-                        boxShadow: "inset 0 0 0 1px var(--accent)",
-                      }
-                    : {
-                        background: "#fff",
-                        color: "var(--text-2)",
-                        boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
-                      }
+                    ? { background: "var(--accent-soft)", color: "var(--accent)", boxShadow: "inset 0 0 0 1px var(--accent)" }
+                    : { background: "var(--surface)", color: "var(--text-2)", boxShadow: "inset 0 0 0 0.5px var(--separator)" }
                 }
               >
-                #{t}
+                #{tg}
               </button>
             );
           })}
         </div>
       )}
 
-      {/* Results */}
+      {/* Section rails — only on the unfiltered feed */}
+      {!isFiltering && restaurants.length > 0 && (
+        <div className="pt-1 pb-2">
+          <HomeSections restaurants={restaurants} />
+        </div>
+      )}
+
+      {/* Feed */}
       {filtered.length > 0 ? (
-        <div className="px-4 flex flex-col gap-2.5">
-          {filtered.map((r) => (
-            <RestaurantCard key={r.id} restaurant={r} />
-          ))}
+        <div className="px-[18px] pt-5">
+          {!isFiltering && (
+            <div className="flex items-end gap-2.5 mb-3">
+              <div>
+                <h2 className="font-display text-[21px] font-extrabold flex items-center gap-1.5">🆕 전체 기록</h2>
+                <div className="text-[12.5px] mt-0.5" style={{ color: "var(--text-2)" }}>최근 추가한 순</div>
+              </div>
+            </div>
+          )}
+          <div className="flex flex-col gap-3.5">
+            {(isFiltering ? filtered : recent).map((r) => (
+              <RestaurantCard key={r.id} restaurant={r} />
+            ))}
+          </div>
         </div>
       ) : (
         <NoResults onClear={() => { setQuery(""); setCategory("전체"); setTag(null); setFavoritesOnly(false); }} />
@@ -281,19 +255,11 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
 function NoResults({ onClear }: { onClear: () => void }) {
   return (
     <div className="flex flex-col items-center text-center py-16 px-8">
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3"
-        style={{ background: "var(--bg)", color: "var(--text-2)" }}
-      >
+      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style={{ background: "var(--bg-2)", color: "var(--text-2)" }}>
         <Sym name="magnifyingglass" size={24} />
       </div>
-      <h2 className="text-[16px] font-bold">검색 결과가 없어요</h2>
-      <button
-        type="button"
-        onClick={onClear}
-        className="mt-4 text-[14px] font-semibold"
-        style={{ color: "var(--accent)" }}
-      >
+      <h2 className="font-display text-[18px] font-extrabold">검색 결과가 없어요</h2>
+      <button type="button" onClick={onClear} className="mt-4 text-[14px] font-bold" style={{ color: "var(--accent)" }}>
         필터 초기화
       </button>
     </div>

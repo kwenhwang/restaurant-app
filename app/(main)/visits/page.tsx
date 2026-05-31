@@ -1,12 +1,16 @@
+// app/(main)/visits/page.tsx — v3
+// Data + grouping logic unchanged. Re-skinned: tokenized stat hero (was hardcoded
+// orange), serif month headers + restaurant names, unified empty state (F2).
+
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import Sym from "@/components/ui/Sym";
 import { LargeTitle } from "@/components/ui/LargeTitle";
-import { SectionHeader, Group } from "@/components/ui/Group";
+import { Group } from "@/components/ui/Group";
+import EmptyState from "@/components/ui/EmptyState";
 
 type Visit = {
   id: string;
-  visited_at: string; // ISO date
+  visited_at: string;
   memo?: string | null;
   restaurant_id: string;
   restaurant?: { id: string; name: string; category?: string | null } | null;
@@ -49,7 +53,6 @@ export default async function VisitsPage() {
     .order("visited_at", { ascending: false });
 
   const total = visits?.length ?? 0;
-
   const now = new Date();
   const thisMonth = (visits ?? []).filter((v) => {
     const d = new Date(v.visited_at);
@@ -61,85 +64,46 @@ export default async function VisitsPage() {
   return (
     <>
       <div style={{ height: 48 }} />
-
       <LargeTitle title="방문 기록" meta={`지금까지 ${total}번의 식사`} />
 
-      {/* Stat hero */}
-      <div className="px-4 pb-1.5">
-        <div
-          className="rounded-[22px] p-[18px] text-white relative overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #FF6F3D 0%, #D94A1E 100%)" }}
-        >
-          <div className="text-[12px] font-semibold opacity-90">이번 달</div>
-          <div className="flex items-baseline gap-1 mt-0.5">
-            <div
-              className="text-[44px] font-extrabold leading-none"
-              style={{ letterSpacing: "-1.2px" }}
-            >
-              {thisMonth}
-            </div>
-            <div className="text-[16px] font-semibold opacity-90">회</div>
-          </div>
-          <div className="text-[12px] mt-1 opacity-85">
-            계속 기록 중이에요. 천천히, 그러나 꾸준히.
-          </div>
-
+      {total > 0 && (
+        <div className="px-[18px] pb-1.5">
           <div
-            className="absolute -right-5 -top-5 w-[140px] h-[140px] rounded-full"
-            style={{ background: "rgba(255,255,255,0.08)" }}
-          />
+            className="rounded-[22px] p-[18px] text-white relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-press) 100%)" }}
+          >
+            <div className="text-[12px] font-semibold opacity-90">이번 달</div>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <div className="font-display text-[44px] font-black leading-none tabular-nums" style={{ letterSpacing: "-1.2px" }}>
+                {thisMonth}
+              </div>
+              <div className="text-[16px] font-bold opacity-90">회</div>
+            </div>
+            <div className="text-[12px] mt-1 opacity-85">계속 기록 중이에요. 천천히, 그러나 꾸준히.</div>
+            <div className="absolute -right-5 -top-5 w-[140px] h-[140px] rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Sections */}
       {groups.length > 0 ? (
         groups.map((g) => (
-          <section key={g.key} className="px-4 pt-2">
-            <SectionHeader>{fmtMonth(g.date)}</SectionHeader>
+          <section key={g.key} className="px-[18px] pt-3">
+            <h2 className="font-display text-[18px] font-extrabold mb-2.5 px-0.5">{fmtMonth(g.date)}</h2>
             <Group>
               {g.items.map((v) => {
                 const d = new Date(v.visited_at);
                 return (
-                  <Link
-                    key={v.id}
-                    href={`/restaurants/${v.restaurant_id}`}
-                    className="flex items-center gap-3.5 px-3.5 py-3"
-                  >
-                    <div
-                      className="w-11 h-11 rounded-[12px] flex flex-col items-center justify-center shrink-0"
-                      style={{ background: "var(--bg)" }}
-                    >
-                      <div
-                        className="text-[10px] font-semibold"
-                        style={{ color: "var(--text-2)" }}
-                      >
-                        {WEEKDAYS[d.getDay()]}
-                      </div>
-                      <div
-                        className="text-[17px] font-extrabold leading-none"
-                        style={{ letterSpacing: "-0.3px" }}
-                      >
-                        {d.getDate()}
-                      </div>
+                  <Link key={v.id} href={`/restaurants/${v.restaurant_id}`} className="flex items-center gap-3.5 px-3.5 py-3">
+                    <div className="w-11 h-11 rounded-[12px] flex flex-col items-center justify-center shrink-0" style={{ background: "var(--bg-2)" }}>
+                      <div className="text-[10px] font-bold" style={{ color: "var(--text-2)" }}>{WEEKDAYS[d.getDay()]}</div>
+                      <div className="text-[17px] font-black leading-none tabular-nums" style={{ letterSpacing: "-0.3px" }}>{d.getDate()}</div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[15px] font-bold tracking-tight truncate">
-                        {v.restaurant?.name ?? "삭제된 가게"}
-                      </div>
-                      {v.memo && (
-                        <div
-                          className="text-[13px] mt-0.5 truncate"
-                          style={{ color: "var(--text-2)" }}
-                        >
-                          {v.memo}
-                        </div>
-                      )}
+                      <div className="font-display text-[15.5px] font-extrabold truncate">{v.restaurant?.name ?? "삭제된 가게"}</div>
+                      {v.memo && <div className="text-[13px] mt-0.5 truncate" style={{ color: "var(--text-2)" }}>{v.memo}</div>}
                     </div>
                     {v.restaurant?.category && (
-                      <span
-                        className="text-[11px] font-semibold px-2 py-1 rounded-md"
-                        style={{ background: "var(--bg)", color: "var(--text-2)" }}
-                      >
+                      <span className="text-[11px] font-bold px-2 py-1 rounded-md" style={{ background: "var(--bg-2)", color: "var(--text-2)" }}>
                         {v.restaurant.category}
                       </span>
                     )}
@@ -150,21 +114,15 @@ export default async function VisitsPage() {
           </section>
         ))
       ) : (
-        <div className="flex flex-col items-center text-center py-20 px-8">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-          >
-            <Sym name="calendar" size={28} />
-          </div>
-          <h2 className="text-[17px] font-bold">방문 기록이 없어요</h2>
-          <p
-            className="text-[14px] mt-1.5 max-w-[260px]"
-            style={{ color: "var(--text-2)" }}
-          >
-            맛집 상세 화면에서 방문을 기록해 보세요.
-          </p>
-        </div>
+        <EmptyState
+          tone="var(--accent)"
+          emoji="🗓️"
+          title="방문 기록이 비어 있어요"
+          body="맛집 상세 화면에서 방문을 남기면, 나의 미식 타임라인이 채워져요."
+          cta="맛집 둘러보기"
+          ctaHref="/"
+          ctaIcon="house"
+        />
       )}
     </>
   );

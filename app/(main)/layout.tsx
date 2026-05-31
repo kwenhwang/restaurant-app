@@ -3,10 +3,10 @@ import PullToRefresh from "@/components/ui/PullToRefresh";
 import OfflineBanner from "@/components/ui/OfflineBanner";
 
 /**
- * Main layout — Apple HIG mobile shell.
- * The previous top header navigation is replaced by a bottom Liquid Glass
- * tab bar (defined in components/ui/TabBar). User identity / logout live
- * under the Profile tab.
+ * Main layout — mobile shell.
+ * Bottom Liquid Glass tab bar (components/ui/TabBar). User identity / logout
+ * live under the Profile tab.
+ * v3: <main> is the skip-link target (#main-content) and a labelled landmark.
  */
 export default function MainLayout({
   children,
@@ -18,7 +18,9 @@ export default function MainLayout({
       <OfflineBanner />
       <PullToRefresh />
       <main
-        className="mx-auto max-w-[640px]"
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto max-w-[640px] outline-none"
         style={{ paddingBottom: "160px" /* clear FAB(124px) + safe area */ }}
       >
         {children}
@@ -27,6 +29,7 @@ export default function MainLayout({
       {/* Bottom scrim — solid surface behind the TabBar so content
           doesn't peek through when scrolling under it */}
       <div
+        aria-hidden="true"
         className="fixed left-0 right-0 bottom-0 z-20 pointer-events-none"
         style={{
           height: 110,

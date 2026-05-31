@@ -1,59 +1,130 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────
-   Design tokens — Apple HIG inspired
+   eatlog — Design tokens v3 (editorial gastronomic journal)
+   Base preserved from v2 (Apple HIG). Extended for v3:
+   · duo accent — orange primary + deep-green secondary
+   · 8 category color families (fg / soft)
+   · serif display headline (Noto Serif KR) + Pretendard body
+   · warm paper light surface / true-black dark
+
+   Fonts are SELF-HOSTED via next/font (see app/fonts.ts + app/layout.tsx).
+   No external @import → no CSP changes needed. The `--font-pretendard` and
+   `--font-noto-serif-kr` CSS variables are injected on <html> by next/font.
    ───────────────────────────────────────────────────────────── */
+
 :root {
-  /* surfaces */
-  --bg: #F2F2F7;           /* systemGroupedBackground */
+  /* surfaces — warm paper */
+  --bg: #F4F1EA;            /* warm grouped background */
+  --bg-2: #EDE9DF;
   --surface: #FFFFFF;
-  --surface-2: #FAFAFA;
+  --surface-2: #FBF9F4;
 
   /* text */
-  --text: #1c1c1e;         /* label */
-  --text-2: rgba(60,60,67,0.6);    /* secondaryLabel */
-  --text-3: rgba(60,60,67,0.3);    /* tertiaryLabel */
-  --separator: rgba(60,60,67,0.12);
+  --text: #1B1A17;
+  --text-2: rgba(60,56,48,0.62);
+  --text-3: rgba(60,56,48,0.34);
+  --separator: rgba(60,56,48,0.12);
 
-  /* brand */
-  --accent: #FF6F3D;       /* warm refined orange */
-  --accent-soft: #FFEFE7;
-  --accent-press: #E55A2B;
+  /* brand — primary (orange) */
+  --accent: #F2622E;
+  --accent-soft: #FCE9E0;
+  --accent-press: #D34D1F;
+
+  /* brand — secondary (deep green) */
+  --accent-2: #1F8A4C;
+  --accent-2-soft: #E2F1E7;
+  --accent-2-press: #166E3B;
+
+  /* rating gold (top ranks) */
+  --gold: #B6892F;
+  --gold-soft: #F4ECD8;
+
+  /* radii / shadow */
+  --r-card: 22px;
+  --r-tile: 16px;
+  --shadow-1: 0 1px 2px rgba(40,30,15,0.05);
+  --shadow-2: 0 8px 26px rgba(40,30,15,0.10), 0 1px 2px rgba(40,30,15,0.05);
+  --shadow-photo: 0 14px 34px rgba(40,30,15,0.16);
+
+  /* category color families: --c-<k> strong · --c-<k>-soft chip bg */
+  --c-han:  #E8552E; --c-han-soft:#FBE5DC;
+  --c-jung: #D23A47; --c-jung-soft:#FAE0E2;
+  --c-il:   #D45C86; --c-il-soft:#FAE4EC;
+  --c-yang: #C7892B; --c-yang-soft:#F6EAD2;
+  --c-cafe: #8A6A4A; --c-cafe-soft:#EFE6DA;
+  --c-sul:  #B98A1E; --c-sul-soft:#F4ECCF;
+  --c-des:  #C65C97; --c-des-soft:#F8E2EF;
+  --c-etc:  #6B7280; --c-etc-soft:#E8EAED;
+
+  /* editorial intensity (0..1) — affects section-number scale, whitespace */
+  --ed: 0.6;
 }
 
 html[data-theme="dark"] {
-  --bg: #000000;
-  --surface: #1c1c1e;       /* secondarySystemBackground */
-  --surface-2: #2c2c2e;
-  --text: #f5f5f7;
-  --text-2: rgba(235,235,245,0.6);
-  --text-3: rgba(235,235,245,0.3);
-  --separator: rgba(235,235,245,0.15);
-  --accent: #FF7E50;        /* slightly lifted for dark */
+  --bg: #0C0B0A;
+  --bg-2: #161412;
+  --surface: #1A1815;       /* secondarySystemBackground */
+  --surface-2: #232019;
+  --text: #F6F2EA;
+  --text-2: rgba(240,235,225,0.62);
+  --text-3: rgba(240,235,225,0.34);
+  --separator: rgba(240,235,225,0.14);
+
+  --accent: #FF7E50;
   --accent-soft: rgba(255,111,61,0.18);
   --accent-press: #E55A2B;
+
+  --accent-2: #3DBE73;
+  --accent-2-soft: rgba(61,190,115,0.18);
+  --accent-2-press: #2C9A5A;
+
+  --gold: #D8B45E;
+  --gold-soft: rgba(216,180,94,0.16);
+
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-2: 0 10px 30px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-photo: 0 14px 34px rgba(0,0,0,0.55);
+
+  --c-han:#FF7A52; --c-han-soft:rgba(232,85,46,0.20);
+  --c-jung:#F2616C; --c-jung-soft:rgba(210,58,71,0.20);
+  --c-il:#F083A8; --c-il-soft:rgba(212,92,134,0.20);
+  --c-yang:#E2AE54; --c-yang-soft:rgba(199,137,43,0.20);
+  --c-cafe:#BF9670; --c-cafe-soft:rgba(138,106,74,0.24);
+  --c-sul:#DCAE3E; --c-sul-soft:rgba(185,138,30,0.20);
+  --c-des:#E984BE; --c-des-soft:rgba(198,92,151,0.20);
+  --c-etc:#9CA3AF; --c-etc-soft:rgba(107,114,128,0.24);
+
   color-scheme: dark;
 }
 
 /* Auto follow OS when no explicit choice */
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) {
-    --bg: #000000;
-    --surface: #1c1c1e;
-    --surface-2: #2c2c2e;
-    --text: #f5f5f7;
-    --text-2: rgba(235,235,245,0.6);
-    --text-3: rgba(235,235,245,0.3);
-    --separator: rgba(235,235,245,0.15);
-    --accent: #FF7E50;
-    --accent-soft: rgba(255,111,61,0.18);
-    --accent-press: #E55A2B;
+    --bg: #0C0B0A; --bg-2:#161412; --surface: #1A1815; --surface-2: #232019;
+    --text: #F6F2EA; --text-2: rgba(240,235,225,0.62); --text-3: rgba(240,235,225,0.34);
+    --separator: rgba(240,235,225,0.14);
+    --accent: #FF7E50; --accent-soft: rgba(255,111,61,0.18); --accent-press: #E55A2B;
+    --accent-2: #3DBE73; --accent-2-soft: rgba(61,190,115,0.18); --accent-2-press: #2C9A5A;
+    --gold:#D8B45E; --gold-soft:rgba(216,180,94,0.16);
+    --shadow-1:0 1px 2px rgba(0,0,0,0.4);
+    --shadow-2:0 10px 30px rgba(0,0,0,0.5),0 1px 2px rgba(0,0,0,0.4);
+    --shadow-photo:0 14px 34px rgba(0,0,0,0.55);
+    --c-han:#FF7A52; --c-han-soft:rgba(232,85,46,0.20);
+    --c-jung:#F2616C; --c-jung-soft:rgba(210,58,71,0.20);
+    --c-il:#F083A8; --c-il-soft:rgba(212,92,134,0.20);
+    --c-yang:#E2AE54; --c-yang-soft:rgba(199,137,43,0.20);
+    --c-cafe:#BF9670; --c-cafe-soft:rgba(138,106,74,0.24);
+    --c-sul:#DCAE3E; --c-sul-soft:rgba(185,138,30,0.20);
+    --c-des:#E984BE; --c-des-soft:rgba(198,92,151,0.20);
+    --c-etc:#9CA3AF; --c-etc-soft:rgba(107,114,128,0.24);
     color-scheme: dark;
   }
 }
 
 @theme inline {
   --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
   --color-surface: var(--surface);
   --color-text: var(--text);
   --color-text-2: var(--text-2);
@@ -61,9 +132,14 @@ html[data-theme="dark"] {
   --color-separator: var(--separator);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-2: var(--accent-2);
+  --color-accent-2-soft: var(--accent-2-soft);
+  --color-gold: var(--gold);
 
-  --font-sans: "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont,
-               "Pretendard", "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-pretendard), "Pretendard Variable", "Pretendard",
+               "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-noto-serif-kr), "Noto Serif KR", "Pretendard", serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -76,6 +152,9 @@ html, body {
   letter-spacing: -0.2px;
 }
 
+/* Editorial serif display headline */
+.font-display { font-family: var(--font-display); }
+
 /* iOS-style hidden scrollbar for horizontal scrollers */
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -85,20 +164,19 @@ html, body {
   background-image: repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 1px, transparent 1px 8px);
 }
 
-/* Glass material — used by nav pills, tab bar */
+/* Glass material — nav pills, tab bar */
 .glass {
   background: rgba(255,255,255,0.78);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 .glass-dark {
-  background: rgba(28,28,30,0.7);
+  background: rgba(26,24,21,0.7);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
-/* Map hard-coded white backgrounds to themed surface in dark mode.
-   The app uses many `bg-white` cards built before tokenization. */
+/* Map hard-coded white card backgrounds to themed surface in dark mode. */
 html[data-theme="dark"] .bg-white,
 html[data-theme="dark"] [class*="bg-white"] {
   background-color: var(--surface) !important;
@@ -109,15 +187,115 @@ html[data-theme="dark"] [class*="bg-white"] {
     background-color: var(--surface) !important;
   }
 }
-
-/* Glass surfaces also flip */
-html[data-theme="dark"] .glass {
-  background: rgba(28,28,30,0.78) !important;
-  color: var(--text);
-}
+html[data-theme="dark"] .glass { background: rgba(26,24,21,0.78) !important; color: var(--text); }
 @media (prefers-color-scheme: dark) {
-  html:not([data-theme]) .glass {
-    background: rgba(28,28,30,0.78) !important;
-    color: var(--text);
+  html:not([data-theme]) .glass { background: rgba(26,24,21,0.78) !important; color: var(--text); }
+}
+
+/* ── Micro-interactions ─────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes heart-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(0.82); }
+  55% { transform: scale(1.28); }
+  75% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+@keyframes heart-burst { 0% { transform: scale(0.2); opacity: 0.9; } 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes shimmer { 0% { background-position: -340px 0; } 100% { background-position: 340px 0; } }
+@keyframes fade-up { from { transform: translateY(10px); } to { transform: translateY(0); } }
+
+.animate-pop { animation: heart-pop .42s ease-out; }
+.animate-fade-up { animation: fade-up .4s ease both; }
+
+/* Consistent skeleton (E2) — visible at rest, never gates content */
+.skeleton {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--text) 6%, transparent) 25%,
+    color-mix(in srgb, var(--text) 11%, transparent) 37%,
+    color-mix(in srgb, var(--text) 6%, transparent) 63%);
+  background-size: 680px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Film grain for elevated "no photo" placeholders (CategoryPlaceholder) —
+   kills the flat-gradient look. */
+.ph-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
   }
+}
+
+/* ── Accessibility ──────────────────────────────────────────── */
+
+/* Screen-reader-only utility (skip link, icon-button labels). */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.focus\:not-sr-only:focus {
+  position: fixed;
+  width: auto; height: auto;
+  margin: 0; overflow: visible; clip: auto; white-space: normal;
+}
+
+/*
+ * Visible keyboard focus ring on every interactive element (WCAG 2.4.7).
+ * :focus-visible only → no ring on mouse/touch, ring on keyboard/switch nav.
+ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+/* On dark photo overlays, a white halo keeps the orange ring visible. */
+.on-photo:focus-visible {
+  outline-color: #fff;
+  box-shadow: 0 0 0 5px rgba(0,0,0,0.4);
+}
+
+/* Honour the OS "increase contrast" setting — firm up hairlines & secondary text. */
+@media (prefers-contrast: more) {
+  :root {
+    --separator: rgba(60,56,48,0.34);
+    --text-2: rgba(40,36,30,0.86);
+    --text-3: rgba(40,36,30,0.6);
+  }
+  html[data-theme="dark"] {
+    --separator: rgba(240,235,225,0.4);
+    --text-2: rgba(245,240,232,0.9);
+    --text-3: rgba(245,240,232,0.64);
+  }
+  .skeleton { outline: 1px solid var(--separator); }
+}
+
+/*
+ * Dynamic Type: the app shell is a fixed max-w-[640px] column, but honour the
+ * user's root font scale so text tracks their accessibility setting. rem-based
+ * components inherit this; px values are intentional for chrome (status bar,
+ * tab bar) that must stay fixed.
+ */
+@media (min-resolution: 0.001dpi) {
+  html { font-size: 100%; }
 }

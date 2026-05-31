@@ -36,13 +36,14 @@ export default function TabBar() {
 
   return (
     <>
-      {/* Floating "+" register button — separate from nav so it sits above */}
+      {/* Floating "+" register button — separate from nav so it sits above.
+          v3: respects safe-area inset so it clears the home indicator. */}
       <Link
         href="/capture"
         aria-label="맛집 등록"
-        className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center justify-center rounded-full text-white"
+        className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center justify-center rounded-full text-white transition-transform active:scale-95"
         style={{
-          bottom: 60,
+          bottom: "calc(60px + env(safe-area-inset-bottom, 0px))",
           width: 64,
           height: 64,
           background: "var(--accent)",
@@ -54,8 +55,10 @@ export default function TabBar() {
       </Link>
 
       <nav
-        className="fixed left-3 right-3 bottom-6 h-16 rounded-[28px] z-30"
+        aria-label="주요 메뉴"
+        className="fixed left-3 right-3 z-30 h-16 rounded-[28px]"
         style={{
+          bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
           background: "var(--surface)",
           boxShadow:
             "0 8px 28px rgba(0,0,0,0.14), 0 1px 2px rgba(0,0,0,0.06), 0 0 0 0.5px rgba(0,0,0,0.06)",
@@ -64,15 +67,11 @@ export default function TabBar() {
         }}
       >
         <ul className="relative h-full grid grid-cols-[1fr_1fr_72px_1fr_1fr] items-center px-1">
-          {/* 0: 맛집 */}
           <TabItem item={ITEMS[0]} active={isActive(ITEMS[0].href)} />
-          {/* 1: 지도 */}
           <TabItem item={ITEMS[1]} active={isActive(ITEMS[1].href)} />
-          {/* 2: empty center — reserved for floating + button */}
+          {/* center — reserved for the floating + button */}
           <span aria-hidden="true" />
-          {/* 3: 기록 */}
           <TabItem item={ITEMS[2]} active={isActive(ITEMS[2].href)} />
-          {/* 4: 프로필 */}
           <TabItem item={ITEMS[3]} active={isActive(ITEMS[3].href)} />
         </ul>
       </nav>
@@ -81,18 +80,22 @@ export default function TabBar() {
 }
 
 function TabItem({ item, active }: { item: Item; active: boolean }) {
-  const iconName = active ? ((item.icon + ".fill") as `${typeof item.icon}.fill`) : item.icon;
+  const iconName = active
+    ? ((item.icon + ".fill") as `${typeof item.icon}.fill`)
+    : item.icon;
   return (
     <li className="flex justify-center">
       <Link
         href={item.href}
-        className="flex flex-col items-center gap-0.5"
+        aria-current={active ? "page" : undefined}
+        aria-label={item.label}
+        className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl"
         style={{ color: active ? "var(--accent)" : "var(--text-2)" }}
       >
         <Sym name={iconName} size={24} />
         <span
           className="text-[10.5px] tracking-tight"
-          style={{ fontWeight: active ? 700 : 500 }}
+          style={{ fontWeight: active ? 700 : 500, whiteSpace: "nowrap" }}
         >
           {item.label}
         </span>

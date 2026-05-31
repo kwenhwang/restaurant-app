@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import RegisterSW from "@/components/ui/RegisterSW";
+import { pretendard, notoSerifKr } from "./fonts";
 
 export const metadata: Metadata = {
   title: "맛집 기록장",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "맛집",
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
   },
   icons: {
     icon: [
@@ -24,16 +25,23 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // NOTE (a11y): maximumScale / user-scalable removed — never block pinch-zoom.
+  // Users with low vision must be able to zoom (WCAG 1.4.4).
   viewportFit: "cover",
-  themeColor: "#FF6F3D",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F4F1EA" },
+    { media: "(prefers-color-scheme: dark)", color: "#0C0B0A" },
+  ],
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko" className="h-full antialiased">
+    <html
+      lang="ko"
+      className={`h-full antialiased ${pretendard.variable} ${notoSerifKr.variable}`}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -59,6 +67,14 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full bg-bg text-text">
+        {/* Skip link (a11y) — first focusable element */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-xl focus:font-bold"
+          style={{ background: "var(--accent)", color: "#fff" }}
+        >
+          본문으로 건너뛰기
+        </a>
         {children}
         <RegisterSW />
       </body>

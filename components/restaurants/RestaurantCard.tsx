@@ -1,17 +1,21 @@
-// components/restaurants/RestaurantCard.tsx — v2
-// Adds: rank badge (top-right) · visit count + relative time line · inline tags.
+// components/restaurants/RestaurantCard.tsx — v3
+// Photo-forward card (A1): large 4:3 image with score / rank / favorite
+// overlays (Beli/Tabelog style). Serif name. Category chip + visit meta below.
+// Empty photo → category emoji + gradient (preserved).
+// Same `restaurant` prop shape as v2.
 
 import Link from "next/link";
 import Image from "next/image";
 import Sym from "@/components/ui/Sym";
 import Stars from "@/components/ui/Stars";
-import RankBadge from "@/components/restaurants/RankBadge";
+import FavoriteButton from "@/components/restaurants/FavoriteButton";
+import CategoryPlaceholder from "@/components/restaurants/CategoryPlaceholder";
 import { categoryStyle } from "@/lib/category-icons";
 import { relativeTime } from "@/lib/relative-time";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
-type Image = { id: string; storage_path: string; is_primary?: boolean };
+type Img = { id: string; storage_path: string; is_primary?: boolean };
 type Restaurant = {
   id: string;
   name: string;
@@ -19,13 +23,12 @@ type Restaurant = {
   rating?: number | null;
   address?: string | null;
   is_favorite?: boolean;
-  images?: Image[];
-
-  // v2 derived fields — provided by parent that aggregates visits.
+  images?: Img[];
   visit_count?: number;
   last_visit?: string | null;
   tags?: string[];
-  rank?: number; // 1-based; undefined hides the badge
+  rank?: number;
+  rankTotal?: number;
 };
 
 function imageUrl(path: string) {
@@ -35,101 +38,109 @@ function imageUrl(path: string) {
 export default function RestaurantCard({ restaurant }: { restaurant: Restaurant }) {
   const primary =
     restaurant.images?.find((i) => i.is_primary) ?? restaurant.images?.[0];
-
+  const s = categoryStyle(restaurant.category);
   const visitCount = restaurant.visit_count ?? 0;
   const last = restaurant.last_visit ? relativeTime(restaurant.last_visit) : "";
   const tags = restaurant.tags ?? [];
+  const rank = restaurant.rank;
+  const gold = rank != null && rank <= 3;
 
   return (
     <Link
       href={`/restaurants/${restaurant.id}`}
-      className="relative block rounded-[18px] bg-white p-2.5 flex gap-3 items-center transition-transform active:scale-[0.99]"
-      style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+      className="block overflow-hidden transition-transform active:scale-[0.98]"
+      style={{
+        borderRadius: "var(--r-card)",
+        background: "var(--surface)",
+        boxShadow: "var(--shadow-1)",
+      }}
     >
-      {restaurant.rank != null && (
-        <RankBadge rank={restaurant.rank} />
-      )}
-
-      {primary ? (
-        <div className="relative w-[72px] h-[72px] rounded-[12px] overflow-hidden shrink-0">
+      {/* PHOTO */}
+      <div className="relative w-full" style={{ height: 190 }}>
+        {primary ? (
           <Image
             src={imageUrl(primary.storage_path)}
-            alt=""
+            alt={restaurant.name}
             fill
-            sizes="72px"
+            sizes="(max-width: 768px) 100vw, 640px"
             className="object-cover"
           />
-        </div>
-      ) : (() => {
-        const s = categoryStyle(restaurant.category);
-        return (
-          <div
-            className="w-[72px] h-[72px] rounded-[12px] shrink-0 flex items-center justify-center text-[34px]"
-            style={{ background: s.gradient }}
-            aria-hidden="true"
-          >
-            <span style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.08))" }}>{s.emoji}</span>
-          </div>
-        );
-      })()}
+        ) : (
+          <CategoryPlaceholder category={restaurant.category} size="hero" />
+        )}
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <div className="text-[17px] font-bold tracking-tight truncate">
-            {restaurant.name}
-          </div>
-          {restaurant.is_favorite && (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"
-              style={{ color: "var(--accent)", flexShrink: 0 }}
-            >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <Stars value={restaurant.rating ?? 0} size={12} />
-          {restaurant.category && (
-            <span className="text-[12px]" style={{ color: "var(--text-2)" }}>
-              · {restaurant.category}
-            </span>
-          )}
-        </div>
-
-        {/* Visit info — only when there's at least one visit */}
-        {visitCount > 0 && (
-          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+        {/* top overlays */}
+        <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
+          {gold ? (
             <span
-              className="inline-flex items-center gap-1 px-1.5 py-[2px] rounded-md text-[11px] font-semibold tabular-nums"
-              style={{ background: "var(--bg)", color: "var(--text)" }}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-extrabold tabular-nums"
+              style={{ background: "var(--gold)", color: "#fff" }}
             >
-              <Sym name="calendar" size={10} />
-              {visitCount}회
+              <Sym name="star.fill" size={10} /> {rank}위
             </span>
-            {last && (
-              <span className="text-[11px] tabular-nums" style={{ color: "var(--text-2)" }}>
-                · {last}
-              </span>
-            )}
-            {tags.length > 0 && (
-              <span className="text-[11px] truncate" style={{ color: "var(--text-3)" }}>
-                · {tags.slice(0, 2).map((t) => `#${t}`).join(" ")}
-                {tags.length > 2 ? ` +${tags.length - 2}` : ""}
-              </span>
-            )}
-          </div>
-        )}
+          ) : (
+            <span />
+          )}
+          <FavoriteButton
+            restaurantId={restaurant.id}
+            initial={Boolean(restaurant.is_favorite)}
+            size="sm"
+            variant="glass"
+          />
+        </div>
 
-        {/* When no visit yet — fall back to address (preserve v1 behavior) */}
-        {visitCount === 0 && restaurant.address && (
-          <div
-            className="flex items-center gap-1 mt-1 truncate"
-            style={{ color: "var(--text-2)" }}
-          >
-            <Sym name="mappin" size={12} strokeWidth={2} />
-            <span className="text-[12px] truncate">{restaurant.address}</span>
-          </div>
-        )}
+        {/* score */}
+        <div
+          className="absolute left-3 bottom-3 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[12px]"
+          style={{ background: "rgba(20,16,12,0.55)", backdropFilter: "blur(10px)", color: "#fff" }}
+        >
+          <Sym name="star.fill" size={12} className="text-accent" />
+          <span className="font-extrabold text-[14px] tabular-nums">
+            {restaurant.rating ? restaurant.rating.toFixed(1) : "—"}
+          </span>
+        </div>
+      </div>
+
+      {/* META */}
+      <div className="px-3.5 pt-3 pb-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-display text-[19px] font-extrabold truncate" style={{ letterSpacing: "-0.3px" }}>
+            {restaurant.name}
+          </h3>
+          <Stars value={restaurant.rating ?? 0} size={12} />
+        </div>
+
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
+          {restaurant.category && (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-bold leading-none"
+              style={{ color: `var(--c-${s.key})`, background: `var(--c-${s.key}-soft)` }}
+            >
+              <span>{s.emoji}</span>
+              {restaurant.category}
+            </span>
+          )}
+          {visitCount > 0 ? (
+            <span className="inline-flex items-center gap-1.5 text-[12px]" style={{ color: "var(--text-2)" }}>
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-[2px] rounded-md font-bold tabular-nums"
+                style={{ background: "var(--bg-2)", color: "var(--text)" }}
+              >
+                <Sym name="calendar" size={10} />
+                {visitCount}회
+              </span>
+              {last && <span className="tabular-nums">{last}</span>}
+              {tags.length > 0 && <span style={{ color: "var(--text-3)" }}>#{tags[0]}</span>}
+            </span>
+          ) : (
+            restaurant.address && (
+              <span className="inline-flex items-center gap-1 text-[12px] truncate" style={{ color: "var(--text-2)" }}>
+                <Sym name="mappin" size={11} strokeWidth={2} />
+                {restaurant.address.split(" ").slice(0, 2).join(" ")}
+              </span>
+            )
+          )}
+        </div>
       </div>
     </Link>
   );
