@@ -96,7 +96,9 @@ test.describe("collections", () => {
     const anonPage = await anon.newPage();
     await anonPage.goto(`/c/${token}`);
     await expect(anonPage.getByRole("heading", { name })).toBeVisible();
-    await expect(anonPage.getByText(/맛집 컬렉션/)).toBeVisible();
+    // Hero label "맛집 컬렉션 · N곳" — match the eyebrow specifically (avoid
+    // the metadata "맛집 컬렉션" elsewhere in the document)
+    await expect(anonPage.getByText(/맛집 컬렉션 ·/)).toBeVisible();
     await expect(anonPage.getByRole("link", { name: /시작하기/ })).toBeVisible();
     await anon.close();
 
