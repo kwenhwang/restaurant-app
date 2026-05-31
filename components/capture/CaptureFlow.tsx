@@ -265,13 +265,22 @@ export default function CaptureFlow() {
         >
           빠른 등록
         </span>
-        <Link
-          href="/restaurants/new"
-          className="text-[12px] font-semibold"
-          style={{ color: "var(--text-2)" }}
-        >
-          상세 입력
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/import"
+            className="text-[12px] font-semibold"
+            style={{ color: "var(--text-2)" }}
+          >
+            링크
+          </Link>
+          <Link
+            href="/restaurants/new"
+            className="text-[12px] font-semibold"
+            style={{ color: "var(--text-2)" }}
+          >
+            상세 입력
+          </Link>
+        </div>
       </header>
 
       {/* Photo area */}
