@@ -8,6 +8,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import HomeFilters from "@/components/home/HomeFilters";
 import AIRecommend from "@/components/home/AIRecommend";
+import AIDiscover from "@/components/home/AIDiscover";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import RevisitNudge from "@/components/home/RevisitNudge";
 import { LargeTitle } from "@/components/ui/LargeTitle";
@@ -142,6 +143,8 @@ export default async function HomePage() {
           images: r.images,
         }))}
       />
+
+      {count >= 3 && <AIDiscover />}
 
       <div style={{ height: 18 }} />
 
