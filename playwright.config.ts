@@ -20,6 +20,7 @@ export default defineConfig({
     video: "retain-on-failure",
     // Mobile-style viewport — the app is designed for it
     viewport: { width: 414, height: 896 },
+    serviceWorkers: "block",
   },
 
   projects: [
@@ -35,6 +36,10 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         viewport: { width: 414, height: 896 },
         storageState: "tests/e2e/.auth/user.json",
+        // Disable the PWA service worker — its controllerchange listener
+        // triggers a window.location.reload() that races with test
+        // navigations and produces ERR_ABORTED. Tests should hit the network.
+        serviceWorkers: "block",
       },
       dependencies: ["setup"],
     },
