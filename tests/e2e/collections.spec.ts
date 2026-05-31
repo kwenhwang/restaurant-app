@@ -22,10 +22,17 @@ test.describe("collections", () => {
 
     await page.goto("/collections/new");
     await waitForInteractive(page, 'input[name="name"]');
+    await waitForInteractive(page, 'button[type="submit"]');
 
     await page.locator('input[name="name"]').fill(collectionName);
     await page.locator('textarea[name="description"]').fill("Playwright 테스트");
     await page.locator('input[name="is_public"]').check();
+
+    await page.waitForFunction(
+      () => !(document.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,
+      undefined,
+      { timeout: 5_000 },
+    );
     await page.getByRole("button", { name: "만들기" }).click();
 
     await expect(page).toHaveURL(/\/collections\/[a-f0-9-]{36}$/);
@@ -38,9 +45,18 @@ test.describe("collections", () => {
     // Edit
     await page.goto(`/collections/${collectionId}/edit`);
     await waitForInteractive(page, 'input[name="name"]');
+    await waitForInteractive(page, 'button[type="submit"]');
     await page.locator('input[name="name"]').fill(`${collectionName} (수정)`);
+    await page.waitForFunction(
+      () => !(document.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,
+      undefined,
+      { timeout: 5_000 },
+    );
     await page.getByRole("button", { name: "저장" }).click();
     await expect(page).toHaveURL(new RegExp(`/collections/${collectionId}$`));
+    // router.push may navigate before the cache revalidates. Hard-reload
+    // so we read the fresh row.
+    await page.reload();
     await waitForHydration(page);
     await expect(
       page.getByRole("heading", { name: `${collectionName} (수정)` }),
@@ -57,9 +73,15 @@ test.describe("collections", () => {
     const name = `E2E 공유 ${Date.now()}`;
 
     await page.goto("/collections/new");
-    await waitForHydration(page);
+    await waitForInteractive(page, 'input[name="name"]');
+    await waitForInteractive(page, 'button[type="submit"]');
     await page.locator('input[name="name"]').fill(name);
     await page.locator('input[name="is_public"]').check();
+    await page.waitForFunction(
+      () => !(document.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,
+      undefined,
+      { timeout: 5_000 },
+    );
     await page.getByRole("button", { name: "만들기" }).click();
     await expect(page).toHaveURL(/\/collections\/[a-f0-9-]{36}$/);
     const collectionId = page.url().split("/").pop()!;

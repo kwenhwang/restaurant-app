@@ -18,12 +18,18 @@ test.describe("url import", () => {
   test("blocks localhost (SSRF guard)", async ({ page }) => {
     await page.goto("/import");
     await waitForInteractive(page, 'input[type="url"]');
+    await waitForInteractive(page, 'button[type="submit"]');
     const input = page.getByPlaceholder(/instagram.com\/p/);
     await input.fill("http://localhost:8080/foo");
+    // Give React a tick to propagate the state-driven enable
+    await page.waitForFunction(
+      () => !(document.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,
+      undefined,
+      { timeout: 5_000 },
+    );
 
     const submitBtn = page.getByRole("button", { name: "가져오기" });
-    await expect(submitBtn).toBeEnabled();
-    await submitBtn.click({ force: true });
+    await submitBtn.click();
 
     await expect(page.getByText(/내부 주소는 가져올 수 없어요/)).toBeVisible({
       timeout: 15_000,
