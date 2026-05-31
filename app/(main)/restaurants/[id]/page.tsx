@@ -24,6 +24,7 @@ import MenuPendingPoll from "@/components/restaurants/MenuPendingPoll";
 import PlaceInfoGroup from "@/components/restaurants/PlaceInfoGroup";
 import TagList from "@/components/restaurants/TagList";
 import RankPanel from "@/components/restaurants/RankPanel";
+import BlogReviewsSection from "@/components/restaurants/BlogReviewsSection";
 import { categoryStyle } from "@/lib/category-icons";
 import { tryCachedMenu } from "@/lib/menu-cache-lookup";
 import { rankAll } from "@/lib/rankings";
@@ -332,8 +333,16 @@ export default async function RestaurantDetailPage({
           )}
         </Sec>
 
+        {/* BLOG REVIEWS — AI-summarized */}
+        <Sec index={2} title="블로그 후기" sub="여러 후기를 AI가 요약했어요">
+          <BlogReviewsSection
+            restaurantId={id}
+            initial={restaurant.reviews ?? null}
+          />
+        </Sec>
+
         {/* PHOTOS */}
-        <Sec index={2} title="사진">
+        <Sec index={3} title="사진">
           <div className="p-2" style={{ borderRadius: 20, background: "var(--surface)", boxShadow: "var(--shadow-1)" }}>
             <ImageUpload
               restaurantId={id}
@@ -347,7 +356,7 @@ export default async function RestaurantDetailPage({
 
         {/* PLACE INFO */}
         {(restaurant.address || restaurant.phone || restaurant.business_hours || restaurant.place_url) && (
-          <Sec index={3} title="가게 정보">
+          <Sec index={4} title="가게 정보">
             <PlaceInfoGroup
               address={restaurant.address ?? null}
               phone={restaurant.phone ?? null}
@@ -360,7 +369,7 @@ export default async function RestaurantDetailPage({
 
         {/* RANK PANEL */}
         {totalRestaurants >= 2 && (
-          <Sec index={4} title="내 평가 위치">
+          <Sec index={5} title="내 평가 위치">
             <RankPanel
               rank={rank}
               total={totalRestaurants}
@@ -373,7 +382,7 @@ export default async function RestaurantDetailPage({
 
         {/* MEMO */}
         {restaurant.note && (
-          <Sec index={5} title="메모">
+          <Sec index={6} title="메모">
             <div
               className="p-5"
               style={{ borderRadius: 20, background: "var(--surface)", boxShadow: "var(--shadow-1)" }}
