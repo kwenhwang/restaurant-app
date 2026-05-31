@@ -18,13 +18,15 @@ async function authed() {
   return { supabase, user };
 }
 
-export async function createCollection(formData: FormData): Promise<void> {
+export async function createCollection(
+  formData: FormData,
+): Promise<{ id: string } | { error: string }> {
   const { supabase, user } = await authed();
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   const isPublic = formData.get("is_public") === "on";
 
-  if (!name) return;
+  if (!name) return { error: "이름이 필요해요" };
 
   const { data, error } = await supabase
     .from("collections")
@@ -38,10 +40,12 @@ export async function createCollection(formData: FormData): Promise<void> {
     .select("id")
     .single();
 
-  if (error || !data) return;
+  if (error || !data) {
+    return { error: error?.message ?? "생성에 실패했어요" };
+  }
 
   revalidatePath("/collections");
-  redirect(`/collections/${data.id}`);
+  return { id: data.id };
 }
 
 export async function deleteCollection(id: string): Promise<void> {
@@ -52,17 +56,18 @@ export async function deleteCollection(id: string): Promise<void> {
     .eq("id", id)
     .eq("owner_id", user.id);
   revalidatePath("/collections");
-  redirect("/collections");
 }
 
-export async function updateCollection(formData: FormData): Promise<void> {
+export async function updateCollection(
+  formData: FormData,
+): Promise<{ id: string } | { error: string }> {
   const { supabase, user } = await authed();
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   const isPublic = formData.get("is_public") === "on";
 
-  if (!id || !name) return;
+  if (!id || !name) return { error: "id와 이름이 필요해요" };
 
   const existing = await supabase
     .from("collections")
@@ -75,7 +80,7 @@ export async function updateCollection(formData: FormData): Promise<void> {
     ? existing.data?.share_token ?? newToken()
     : null;
 
-  await supabase
+  const { error } = await supabase
     .from("collections")
     .update({
       name: name.slice(0, 60),
@@ -86,8 +91,11 @@ export async function updateCollection(formData: FormData): Promise<void> {
     .eq("id", id)
     .eq("owner_id", user.id);
 
+  if (error) return { error: error.message };
+
   revalidatePath(`/collections/${id}`);
   revalidatePath("/collections");
+  return { id };
 }
 
 export async function addToCollection(

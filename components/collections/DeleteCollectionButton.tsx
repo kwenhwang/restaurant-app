@@ -1,18 +1,25 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 interface Props {
   action: () => Promise<void>;
+  redirectTo?: string;
 }
 
-export default function DeleteCollectionButton({ action }: Props) {
+export default function DeleteCollectionButton({ action, redirectTo = "/collections" }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   function handleClick() {
     if (pending) return;
     if (!window.confirm("이 컬렉션을 삭제할까요?")) return;
-    startTransition(() => action());
+    startTransition(async () => {
+      await action();
+      router.push(redirectTo);
+      router.refresh();
+    });
   }
 
   return (

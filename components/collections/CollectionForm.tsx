@@ -5,13 +5,19 @@
 // progressive-enhancement form-action wiring on Server Components prefixes
 // field names (`_1_name`), which breaks `formData.get("name")` reads in the
 // action. By building FormData manually here we get clean field names.
+//
+// Navigation is also driven from the client (router.push) because redirect()
+// thrown from inside an action awaited via startTransition gets swallowed.
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+
+type ActionResult = { id: string } | { error: string };
 
 interface Props {
   mode: "create" | "edit";
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<ActionResult>;
   initial?: {
     id: string;
     name: string;
@@ -22,6 +28,7 @@ interface Props {
 }
 
 export default function CollectionForm({ mode, action, initial, cancelHref }: Props) {
+  const router = useRouter();
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [isPublic, setIsPublic] = useState(initial?.is_public ?? false);
@@ -33,21 +40,18 @@ export default function CollectionForm({ mode, action, initial, cancelHref }: Pr
     if (!name.trim()) return;
     setError(null);
     startTransition(async () => {
-      try {
-        const fd = new FormData();
-        if (initial?.id) fd.append("id", initial.id);
-        fd.append("name", name.trim());
-        if (description.trim()) fd.append("description", description.trim());
-        if (isPublic) fd.append("is_public", "on");
-        await action(fd);
-      } catch (e) {
-        // redirect() throws a special signal — Next.js catches it at the
-        // boundary, but in some setups it bubbles to the caller. Don't
-        // mask navigation as an error.
-        const msg = e instanceof Error ? e.message : "";
-        if (/NEXT_REDIRECT|next-redirect|redirect/.test(msg)) throw e;
-        setError(msg || "저장에 실패했어요");
+      const fd = new FormData();
+      if (initial?.id) fd.append("id", initial.id);
+      fd.append("name", name.trim());
+      if (description.trim()) fd.append("description", description.trim());
+      if (isPublic) fd.append("is_public", "on");
+      const result = await action(fd);
+      if ("error" in result) {
+        setError(result.error);
+        return;
       }
+      router.push(`/collections/${result.id}`);
+      router.refresh();
     });
   }
 
