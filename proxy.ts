@@ -34,6 +34,7 @@ export async function proxy(request: NextRequest) {
   const isPublicPage =
     pathname.startsWith("/offline") ||
     pathname.startsWith("/r/") ||
+    pathname.startsWith("/c/") ||
     pathname.startsWith("/legal/");
 
   if (!user && !isAuthPage && !isPublicPage) {

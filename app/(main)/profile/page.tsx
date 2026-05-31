@@ -84,6 +84,15 @@ export default async function ProfilePage() {
         <AIInsights hasVisits={(visits?.length ?? 0) > 0} />
       </div>
 
+      <Sec title="나의 큐레이션">
+        <Group>
+          <Link href="/collections" className="flex items-center justify-between px-4 h-[52px]">
+            <span className="text-[15px]">컬렉션</span>
+            <span style={{ color: "var(--text-3)", fontSize: 16 }}>›</span>
+          </Link>
+        </Group>
+      </Sec>
+
       <Sec title="테마">
         <ThemeToggle />
       </Sec>

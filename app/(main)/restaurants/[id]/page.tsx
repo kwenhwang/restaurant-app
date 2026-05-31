@@ -25,6 +25,7 @@ import PlaceInfoGroup from "@/components/restaurants/PlaceInfoGroup";
 import TagList from "@/components/restaurants/TagList";
 import RankPanel from "@/components/restaurants/RankPanel";
 import BlogReviewsSection from "@/components/restaurants/BlogReviewsSection";
+import AddToCollectionButton from "@/components/collections/AddToCollectionButton";
 import { categoryStyle } from "@/lib/category-icons";
 import { tryCachedMenu } from "@/lib/menu-cache-lookup";
 import { rankAll } from "@/lib/rankings";
@@ -279,6 +280,7 @@ export default async function RestaurantDetailPage({
             />
           )}
           <QuickAction icon="plus.circle.fill" label="방문 기록" tone="var(--accent)" href="#visits" />
+          <AddToCollectionButton restaurantId={id} />
           <QuickAction icon="square.and.pencil" label="수정" tone="var(--text)" href={`/restaurants/${id}/edit`} />
         </div>
 
