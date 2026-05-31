@@ -4,6 +4,10 @@ import { test, expect } from "@playwright/test";
 import { waitForHydration, waitForInteractive } from "./helpers";
 
 test.describe("collections", () => {
+  test.beforeEach(async ({ page }) => {
+    // Auto-accept any window.confirm() dialogs (delete confirmations)
+    page.on("dialog", (d) => d.accept().catch(() => {}));
+  });
   test("entry point from profile", async ({ page }) => {
     await page.goto("/profile");
     await waitForHydration(page);

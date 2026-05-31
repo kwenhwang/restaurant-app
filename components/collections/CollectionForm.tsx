@@ -41,7 +41,12 @@ export default function CollectionForm({ mode, action, initial, cancelHref }: Pr
         if (isPublic) fd.append("is_public", "on");
         await action(fd);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "저장에 실패했어요");
+        // redirect() throws a special signal — Next.js catches it at the
+        // boundary, but in some setups it bubbles to the caller. Don't
+        // mask navigation as an error.
+        const msg = e instanceof Error ? e.message : "";
+        if (/NEXT_REDIRECT|next-redirect|redirect/.test(msg)) throw e;
+        setError(msg || "저장에 실패했어요");
       }
     });
   }
