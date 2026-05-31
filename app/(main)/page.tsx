@@ -9,9 +9,11 @@ import { createClient } from "@/lib/supabase/server";
 import HomeFilters from "@/components/home/HomeFilters";
 import AIRecommend from "@/components/home/AIRecommend";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
+import RevisitNudge from "@/components/home/RevisitNudge";
 import { LargeTitle } from "@/components/ui/LargeTitle";
 import Sym from "@/components/ui/Sym";
 import { rankAll } from "@/lib/rankings";
+import { pickRevisitCandidates } from "@/lib/revisit";
 
 const DEFAULT_CATEGORIES = ["전체", "한식", "일식", "중식", "양식", "카페", "술집", "기타"];
 
@@ -128,6 +130,8 @@ export default async function HomePage() {
           </Link>
         }
       />
+
+      <RevisitNudge candidates={pickRevisitCandidates(list, 3)} />
 
       <AIRecommend
         restaurants={list.map((r) => ({
