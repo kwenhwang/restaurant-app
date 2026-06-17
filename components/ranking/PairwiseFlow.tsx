@@ -8,7 +8,7 @@
 //
 // In `rerank` mode the tier step is skipped; the user goes straight to rounds.
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import TierPicker from "./TierPicker";
@@ -55,7 +55,6 @@ export default function PairwiseFlow({ subject, mode, initialTier }: Props) {
   const [opponentsLoaded, setOpponentsLoaded] = useState(false);
 
   async function loadOpponents() {
-    setOpponentsLoaded(false);
     const opps = await pickOpponents(subject.id, TOTAL_ROUNDS);
     setOpponents(opps);
     setOpponentsLoaded(true);
@@ -64,6 +63,15 @@ export default function PairwiseFlow({ subject, mode, initialTier }: Props) {
       setPhase("done");
     }
   }
+
+  // Auto-load opponents when we enter the round phase (rerank goes here
+  // directly; capture goes here after the user picks a tier).
+  useEffect(() => {
+    if (phase === "round" && !opponentsLoaded) {
+      loadOpponents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, opponentsLoaded]);
 
   function handleTier(tier: Tier) {
     setError(null);
@@ -74,7 +82,7 @@ export default function PairwiseFlow({ subject, mode, initialTier }: Props) {
         return;
       }
       setPhase("round");
-      await loadOpponents();
+      // useEffect will load opponents
     });
   }
 
@@ -108,10 +116,6 @@ export default function PairwiseFlow({ subject, mode, initialTier }: Props) {
     }
   }
 
-  // Lazily load opponents when entering round phase in rerank mode
-  if (phase === "round" && !opponentsLoaded && opponents.length === 0 && !pending) {
-    startTransition(loadOpponents);
-  }
 
   return (
     <div className="px-[18px] pb-24 pt-4 space-y-5">
@@ -139,6 +143,12 @@ export default function PairwiseFlow({ subject, mode, initialTier }: Props) {
           onSkip={handleSkip}
           pending={pending}
         />
+      )}
+
+      {phase === "round" && !opponentsLoaded && (
+        <div className="text-center mt-8" style={{ color: "var(--text-2)" }}>
+          비교 후보를 불러오는 중…
+        </div>
       )}
 
       {phase === "round" && opponentsLoaded && opponents.length === 0 && (
