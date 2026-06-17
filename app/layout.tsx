@@ -3,10 +3,18 @@ import "./globals.css";
 import RegisterSW from "@/components/ui/RegisterSW";
 import { pretendard, notoSerifKr } from "./fonts";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://eatlog.duckdns.org";
+
 export const metadata: Metadata = {
-  title: "맛집 기록장",
-  description: "나만의 미식 지도를 만들어 보세요",
+  metadataBase: new URL(SITE),
+  title: "eatlog — 나만의 미식 일지",
+  description: "사진 한 장으로 시작하는 맛집 기록 · AI가 정리해주는 메뉴와 블로그 후기",
   manifest: "/manifest.json",
+  openGraph: {
+    siteName: "eatlog",
+    locale: "ko_KR",
+    type: "website",
+  },
   applicationName: "맛집",
   appleWebApp: {
     capable: true,
