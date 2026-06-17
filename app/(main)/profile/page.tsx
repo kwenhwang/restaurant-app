@@ -17,6 +17,7 @@ import { LargeTitle } from "@/components/ui/LargeTitle";
 import { Group, ListRow } from "@/components/ui/Group";
 import { submitBugReport } from "./bug-action";
 import { deleteAccount } from "./account-action";
+import { getPremiumStatus } from "@/lib/premium";
 
 function Sec({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -32,6 +33,8 @@ export default async function ProfilePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const premium = user ? await getPremiumStatus(supabase, user.id) : null;
 
   const [{ data: restaurants }, { data: visits }] = await Promise.all([
     supabase
@@ -88,6 +91,28 @@ export default async function ProfilePage() {
         <Group>
           <Link href="/collections" className="flex items-center justify-between px-4 h-[52px]">
             <span className="text-[15px]">컬렉션</span>
+            <span style={{ color: "var(--text-3)", fontSize: 16 }}>›</span>
+          </Link>
+        </Group>
+      </Sec>
+
+      <Sec title="Premium">
+        <Group>
+          <Link
+            href={premium ? "/profile/billing" : "/billing/upgrade"}
+            className="flex items-center justify-between px-4 h-[52px]"
+          >
+            <span className="text-[15px] flex items-center gap-2">
+              {premium ? "구독 관리" : "Premium으로 업그레이드"}
+              {premium && (
+                <span
+                  className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full"
+                  style={{ background: "var(--accent-soft)", color: "var(--accent-press)" }}
+                >
+                  {premium.status === "trialing" ? "체험 중" : "활성"}
+                </span>
+              )}
+            </span>
             <span style={{ color: "var(--text-3)", fontSize: 16 }}>›</span>
           </Link>
         </Group>
