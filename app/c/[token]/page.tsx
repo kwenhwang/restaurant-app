@@ -8,9 +8,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { categoryStyle } from "@/lib/category-icons";
 import Sym from "@/components/ui/Sym";
+import FollowButton from "@/components/social/FollowButton";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
@@ -45,12 +47,29 @@ export default async function PublicCollectionPage({ params }: Props) {
 
   const { data: collection } = await admin
     .from("collections")
-    .select("id, name, description, cover_image, item_count, created_at")
+    .select("id, name, description, cover_image, item_count, created_at, owner_id")
     .eq("share_token", token)
     .eq("is_public", true)
     .single();
 
   if (!collection) notFound();
+
+  // Logged-in viewer? If so, expose a follow toggle for the curator.
+  const supabase = await createClient();
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser();
+  let followInitial = false;
+  const showFollow = Boolean(viewer && viewer.id !== collection.owner_id);
+  if (showFollow) {
+    const { data: edge } = await supabase
+      .from("user_follows")
+      .select("follower_id")
+      .eq("follower_id", viewer!.id)
+      .eq("followee_id", collection.owner_id)
+      .maybeSingle();
+    followInitial = !!edge;
+  }
 
   const { data: items } = await admin
     .from("collection_items")
@@ -98,17 +117,26 @@ export default async function PublicCollectionPage({ params }: Props) {
           style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.65) 100%)" }}
         />
         <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-          <div className="text-[12px] font-bold opacity-90 uppercase tracking-wider">
-            맛집 컬렉션 · {rows.length}곳
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[12px] font-bold opacity-90 uppercase tracking-wider">
+                맛집 컬렉션 · {rows.length}곳
+              </div>
+              <h1 className="font-display text-[32px] font-black leading-tight mt-1">
+                {collection.name}
+              </h1>
+              {collection.description && (
+                <p className="text-[14.5px] opacity-95 mt-2 leading-relaxed">
+                  {collection.description}
+                </p>
+              )}
+            </div>
+            {showFollow && (
+              <div className="shrink-0">
+                <FollowButton followeeId={collection.owner_id} initial={followInitial} />
+              </div>
+            )}
           </div>
-          <h1 className="font-display text-[32px] font-black leading-tight mt-1">
-            {collection.name}
-          </h1>
-          {collection.description && (
-            <p className="text-[14.5px] opacity-95 mt-2 leading-relaxed">
-              {collection.description}
-            </p>
-          )}
         </div>
       </header>
 

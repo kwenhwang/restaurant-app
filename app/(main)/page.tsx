@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import HomeFilters from "@/components/home/HomeFilters";
 import AIRecommend from "@/components/home/AIRecommend";
 import AIDiscover from "@/components/home/AIDiscover";
+import FriendCollectionsSection from "@/components/home/FriendCollectionsSection";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import RevisitNudge from "@/components/home/RevisitNudge";
 import { LargeTitle } from "@/components/ui/LargeTitle";
@@ -152,6 +153,8 @@ export default async function HomePage() {
       />
 
       {count >= 3 && <AIDiscover />}
+
+      <FriendCollectionsSection userId={user!.id} />
 
       <div style={{ height: 18 }} />
 
