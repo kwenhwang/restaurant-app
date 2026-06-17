@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import Sym from "@/components/ui/Sym";
+import FeedbackThumbs from "@/components/feedback/FeedbackThumbs";
 import { categoryStyle } from "@/lib/category-icons";
 
 interface Pick {
@@ -166,6 +167,13 @@ export default function AIDiscover() {
                   <p className="text-[12.5px] mt-0.5 leading-snug line-clamp-2" style={{ color: "var(--text-2)" }}>
                     {p.reason}
                   </p>
+                  <div className="mt-1">
+                    <FeedbackThumbs
+                      surface="discover"
+                      target={`${p.name.toLowerCase()}|${p.area.toLowerCase()}`}
+                      context={{ reason: p.reason, category: p.category, area: p.area }}
+                    />
+                  </div>
                 </div>
                 <div
                   className="shrink-0 flex items-center pr-3"

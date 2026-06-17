@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Sym from "@/components/ui/Sym";
+import FeedbackThumbs from "@/components/feedback/FeedbackThumbs";
 
 interface Reviews {
   found: boolean;
@@ -197,15 +198,22 @@ export default function BlogReviewsSection({ restaurantId, initial }: Props) {
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={() => fetchReviews(true)}
-              disabled={loading}
-              className="text-[12px] font-semibold mt-1"
-              style={{ color: "var(--text-3)" }}
-            >
-              <Sym name="sparkles" size={10} /> 다시 요약
-            </button>
+            <div className="flex items-center justify-between mt-1">
+              <button
+                type="button"
+                onClick={() => fetchReviews(true)}
+                disabled={loading}
+                className="text-[12px] font-semibold"
+                style={{ color: "var(--text-3)" }}
+              >
+                <Sym name="sparkles" size={10} /> 다시 요약
+              </button>
+              <FeedbackThumbs
+                surface="review"
+                target={restaurantId}
+                context={{ summary: data.summary }}
+              />
+            </div>
           </div>
         </>
       )}

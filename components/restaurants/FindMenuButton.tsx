@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { MenuData } from "@/app/(main)/restaurants/[id]/menu-action";
+import FeedbackThumbs from "@/components/feedback/FeedbackThumbs";
 
 interface FindResult {
   found: boolean;
@@ -241,6 +242,17 @@ export default function FindMenuButton({ restaurantId, saveMenu }: Props) {
             >
               닫기
             </button>
+          </div>
+          <div className="mt-2 flex items-center justify-end">
+            <FeedbackThumbs
+              surface="menu"
+              target={restaurantId}
+              context={{
+                summary: result.summary,
+                item_count: result.items.length,
+                price_range: result.price_range,
+              }}
+            />
           </div>
         </>
       )}

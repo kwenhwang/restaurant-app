@@ -10,6 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Sym from "@/components/ui/Sym";
 import CategoryPlaceholder from "@/components/restaurants/CategoryPlaceholder";
+import FeedbackThumbs from "@/components/feedback/FeedbackThumbs";
 import { categoryStyle } from "@/lib/category-icons";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
@@ -232,6 +233,14 @@ function HeroCard({ r, reason, q }: { r: RestaurantLite; reason: string; q: stri
         </span>
         <h3 className="font-display text-[28px] font-extrabold" style={{ textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>{r.name}</h3>
         <p className="text-[13.5px] mt-1.5 leading-snug" style={{ color: "rgba(255,255,255,0.92)" }}>{reason}</p>
+        <div className="mt-2">
+          <FeedbackThumbs
+            surface="recommend"
+            target={r.id}
+            context={{ reason, query: q }}
+            tone="light"
+          />
+        </div>
       </div>
     </Link>
   );
