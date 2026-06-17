@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 interface KakaoDoc {
   place_name: string;
@@ -10,6 +12,14 @@ interface KakaoDoc {
 }
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = checkRateLimit({ key: `${user.id}:kakao-keyword`, perMinute: 30, perDay: 1000 });
+  const rlRes = rateLimitResponse(rl);
+  if (rlRes) return rlRes;
+
   const query = request.nextUrl.searchParams.get("query");
   if (!query) return NextResponse.json({ error: "query required" }, { status: 400 });
 

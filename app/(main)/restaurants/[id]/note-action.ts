@@ -25,31 +25,3 @@ export async function saveNote(
   revalidatePath(`/restaurants/${restaurantId}`);
   return { ok: true };
 }
-
-export async function appendNote(restaurantId: string, addition: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-
-  const { data: existing } = await supabase
-    .from("restaurants")
-    .select("note")
-    .eq("id", restaurantId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!existing) throw new Error("Not found");
-
-  const newNote = existing.note ? `${existing.note}\n\n${addition}` : addition;
-
-  const { error } = await supabase
-    .from("restaurants")
-    .update({ note: newNote })
-    .eq("id", restaurantId)
-    .eq("user_id", user.id);
-  if (error) throw error;
-
-  revalidatePath(`/restaurants/${restaurantId}`);
-}

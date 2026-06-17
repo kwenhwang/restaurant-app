@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import Sym from "@/components/ui/Sym";
 
-export type FeedbackSurface = "recommend" | "discover" | "review" | "menu";
+export type FeedbackSurface = "recommend" | "discover" | "review" | "menu" | "insights";
 
 interface Props {
   surface: FeedbackSurface;

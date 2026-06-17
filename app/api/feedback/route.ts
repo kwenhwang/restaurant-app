@@ -12,7 +12,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-const VALID_SURFACES = new Set(["recommend", "discover", "review", "menu"]);
+const VALID_SURFACES = new Set(["recommend", "discover", "review", "menu", "insights"]);
 const PROMPT_CONTEXT_MAX_BYTES = 2048;
 const COMMENT_MAX = 500;
 

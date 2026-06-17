@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import FeedbackThumbs from "@/components/feedback/FeedbackThumbs";
+
 const STORAGE_KEY = "ai-insights-cache";
 const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -89,16 +91,31 @@ export default function AIInsights({ hasVisits }: { hasVisits: boolean }) {
           </p>
         )}
         {text && (
-          <p
-            className="text-[14px] leading-relaxed"
-            style={{ letterSpacing: "-0.2px" }}
-          >
-            {text}
-          </p>
+          <>
+            <p
+              className="text-[14px] leading-relaxed"
+              style={{ letterSpacing: "-0.2px" }}
+            >
+              {text}
+            </p>
+            <div className="mt-2.5 flex justify-end">
+              <FeedbackThumbs
+                surface="insights"
+                target={insightTarget()}
+                context={{ preview: text.slice(0, 200) }}
+              />
+            </div>
+          </>
         )}
       </div>
     </section>
   );
+}
+
+function insightTarget(): string {
+  // Stable per calendar month — votes reset when a fresh insight is shown.
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function SparkleIcon() {

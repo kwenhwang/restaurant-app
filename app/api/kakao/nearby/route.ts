@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 interface KakaoPlace {
   id: string;
@@ -45,6 +47,14 @@ function mapCategory(kakaoCategory: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = checkRateLimit({ key: `${user.id}:kakao-nearby`, perMinute: 20, perDay: 500 });
+  const rlRes = rateLimitResponse(rl);
+  if (rlRes) return rlRes;
+
   const sp = request.nextUrl.searchParams;
   const lat = parseFloat(sp.get("lat") ?? "");
   const lng = parseFloat(sp.get("lng") ?? "");
