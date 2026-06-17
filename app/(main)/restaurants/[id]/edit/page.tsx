@@ -1,5 +1,6 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 import RestaurantForm from "@/components/restaurants/RestaurantForm";
 
 export default async function EditRestaurantPage({
@@ -20,16 +21,21 @@ export default async function EditRestaurantPage({
 
   if (!restaurant) notFound();
 
-  async function updateRestaurant(formData: FormData) {
+  async function updateRestaurant(
+    formData: FormData,
+  ): Promise<{ id: string } | { error: string }> {
     "use server";
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect("/login");
+    if (!user) return { error: "로그인이 필요해요" };
 
-    await supabase
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return { error: "이름이 필요해요" };
+
+    const { error } = await supabase
       .from("restaurants")
       .update({
-        name: formData.get("name") as string,
+        name,
         address: (formData.get("address") as string) || null,
         lat: formData.get("lat") ? parseFloat(formData.get("lat") as string) : null,
         lng: formData.get("lng") ? parseFloat(formData.get("lng") as string) : null,
@@ -40,7 +46,10 @@ export default async function EditRestaurantPage({
       .eq("id", id)
       .eq("user_id", user.id);
 
-    redirect(`/restaurants/${id}`);
+    if (error) return { error: error.message };
+
+    revalidatePath(`/restaurants/${id}`);
+    return { id };
   }
 
   return (
