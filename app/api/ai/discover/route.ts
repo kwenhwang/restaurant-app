@@ -3,13 +3,10 @@
 // AI Friend Curation — finds NEW restaurants outside the user's list,
 // matched to their taste. Uses Gemini Grounding (web search) so we don't
 // invent fake places.
-//
-// Distinct from /api/ai/recommend, which picks from the user's own list.
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 import { generateGroundedJSON } from "@/lib/ai/gemini";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { createAIRoute } from "@/lib/ai/handler";
 
 export const dynamic = "force-dynamic";
 
@@ -24,64 +21,71 @@ interface AIResult {
   picks: Pick[];
 }
 
-export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+interface ResponseShape {
+  picks: Pick[];
+  sources: { url: string; title?: string }[];
+  area: string;
+}
 
-  const rl = checkRateLimit({ key: `${user.id}:ai-discover`, perMinute: 2, perDay: 15 });
-  const rlRes = rateLimitResponse(rl);
-  if (rlRes) return rlRes;
+function extractRegion(address: string): string | null {
+  const m = address.match(/([가-힣]+(?:구|동|시))/);
+  return m?.[1] ?? null;
+}
 
-  const sp = request.nextUrl.searchParams;
-  const userLat = parseFloat(sp.get("lat") ?? "");
-  const userLng = parseFloat(sp.get("lng") ?? "");
-  const hasCoord = isFinite(userLat) && isFinite(userLng);
+export const GET = createAIRoute<null, ResponseShape>({
+  rateKey: "ai-discover",
+  perMinute: 2,
+  perDay: 15,
+  handler: async ({ supabase, user, request }) => {
+    const sp = request.nextUrl.searchParams;
+    const userLat = parseFloat(sp.get("lat") ?? "");
+    const userLng = parseFloat(sp.get("lng") ?? "");
+    const hasCoord = isFinite(userLat) && isFinite(userLng);
 
-  // Build taste profile from top-rated / favorite restaurants
-  const { data: top } = await supabase
-    .from("restaurants")
-    .select("name, category, rating, is_favorite, address")
-    .eq("user_id", user.id)
-    .or("rating.gte.4,is_favorite.eq.true")
-    .order("is_favorite", { ascending: false })
-    .order("rating", { ascending: false })
-    .limit(10);
+    const { data: top } = await supabase
+      .from("restaurants")
+      .select("name, category, rating, is_favorite, address")
+      .eq("user_id", user.id)
+      .or("rating.gte.4,is_favorite.eq.true")
+      .order("is_favorite", { ascending: false })
+      .order("rating", { ascending: false })
+      .limit(10);
 
-  if (!top || top.length < 3) {
-    return NextResponse.json({
-      error: "맛집을 3곳 이상 등록하고 별점을 매겨주세요. 더 정확한 추천을 드릴 수 있어요.",
-      code: "NEED_MORE_DATA",
-    }, { status: 400 });
-  }
+    if (!top || top.length < 3) {
+      return NextResponse.json(
+        {
+          error: "맛집을 3곳 이상 등록하고 별점을 매겨주세요. 더 정확한 추천을 드릴 수 있어요.",
+          code: "NEED_MORE_DATA",
+        },
+        { status: 400 },
+      );
+    }
 
-  // Pick a centroid area (most common 시/구) from addresses
-  const areaMap = new Map<string, number>();
-  for (const r of top) {
-    const region = r.address ? extractRegion(r.address) : null;
-    if (region) areaMap.set(region, (areaMap.get(region) ?? 0) + 1);
-  }
-  const topArea =
-    [...areaMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "서울";
+    const areaMap = new Map<string, number>();
+    for (const r of top) {
+      const region = r.address ? extractRegion(r.address) : null;
+      if (region) areaMap.set(region, (areaMap.get(region) ?? 0) + 1);
+    }
+    const topArea = [...areaMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "서울";
 
-  // Category frequency
-  const catMap = new Map<string, number>();
-  for (const r of top) {
-    if (r.category) catMap.set(r.category, (catMap.get(r.category) ?? 0) + 1);
-  }
-  const topCats = [...catMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c]) => c);
+    const catMap = new Map<string, number>();
+    for (const r of top) {
+      if (r.category) catMap.set(r.category, (catMap.get(r.category) ?? 0) + 1);
+    }
+    const topCats = [...catMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c]) => c);
 
-  const tasteLines = top
-    .map((r) => `- ${r.name}${r.category ? ` (${r.category})` : ""}${r.is_favorite ? " ⭐즐겨찾기" : r.rating ? ` ${r.rating}점` : ""}`)
-    .join("\n");
+    const tasteLines = top
+      .map(
+        (r) =>
+          `- ${r.name}${r.category ? ` (${r.category})` : ""}${r.is_favorite ? " ⭐즐겨찾기" : r.rating ? ` ${r.rating}점` : ""}`,
+      )
+      .join("\n");
 
-  const locationLine = hasCoord
-    ? `사용자 현재 위치 좌표: ${userLat.toFixed(4)}, ${userLng.toFixed(4)} (${topArea} 근처)`
-    : `사용자가 주로 가는 지역: ${topArea}`;
+    const locationLine = hasCoord
+      ? `사용자 현재 위치 좌표: ${userLat.toFixed(4)}, ${userLng.toFixed(4)} (${topArea} 근처)`
+      : `사용자가 주로 가는 지역: ${topArea}`;
 
-  const prompt = `당신은 한국 맛집을 큐레이션하는 친구입니다.
+    const prompt = `당신은 한국 맛집을 큐레이션하는 친구입니다.
 
 **사용자의 취향 (이미 등록·좋아하는 곳)**
 ${tasteLines}
@@ -112,38 +116,15 @@ ${locationLine}
 
 picks 정확히 5개. 같은 카테고리만 반복하지 말 것.`;
 
-  let result: AIResult;
-  let sources: { url: string; title?: string }[];
-  try {
     const r = await generateGroundedJSON<AIResult>(prompt, {
       temperature: 0.6,
       maxOutputTokens: 4000,
     });
-    result = r.data;
-    sources = r.sources.map((s) => ({ url: s.uri, title: s.title }));
-  } catch (e) {
-    const raw = e instanceof Error ? e.message : "AI error";
-    const isQuota = /429|quota|rate.?limit/i.test(raw);
-    return NextResponse.json(
-      {
-        error: isQuota
-          ? "AI 추천 사용량이 잠시 한도에 닿았어요. 잠시 후 다시 시도해 주세요."
-          : "추천에 실패했어요. 잠시 후 다시 시도해 주세요.",
-        code: isQuota ? "QUOTA_EXCEEDED" : "AI_ERROR",
-      },
-      { status: isQuota ? 429 : 502 },
-    );
-  }
 
-  return NextResponse.json({
-    picks: result.picks ?? [],
-    sources,
-    area: topArea,
-  });
-}
-
-function extractRegion(address: string): string | null {
-  // "서울 강남구 ..." or "서울특별시 성동구 ..." or "성수동 ..."
-  const m = address.match(/([가-힣]+(?:구|동|시))/);
-  return m?.[1] ?? null;
-}
+    return {
+      picks: r.data.picks ?? [],
+      sources: r.sources.map((s) => ({ url: s.uri, title: s.title })),
+      area: topArea,
+    };
+  },
+});

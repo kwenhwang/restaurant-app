@@ -1,62 +1,57 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 import { generateJSONWithImage } from "@/lib/ai/gemini";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { AIBadRequest, createAIRoute } from "@/lib/ai/handler";
 
 interface AnalysisResult {
-  category: string;        // 한식·중식·일식·양식·카페·술집·디저트·기타
+  category: string;
   confidence: "high" | "medium" | "low";
-  description: string;     // 한 문장 음식·매장 설명
-  detected_items: string[]; // 식별된 음식 이름들
+  description: string;
+  detected_items: string[];
 }
+
+const MAX_BYTES = 4 * 1024 * 1024;
+const VALID_CATEGORIES = ["한식", "중식", "일식", "양식", "카페", "술집", "디저트", "기타"];
 
 export const dynamic = "force-dynamic";
 
-const MAX_BYTES = 4 * 1024 * 1024; // Gemini inlineData limit ~5MB; keep buffer
+export const POST = createAIRoute<{ imageId: string }, AnalysisResult>({
+  rateKey: "ai-analyze-image",
+  perMinute: 10,
+  perDay: 100,
+  parseBody: (raw) => {
+    const obj = raw as { imageId?: unknown };
+    if (typeof obj.imageId !== "string" || !obj.imageId) {
+      throw new AIBadRequest("imageId required");
+    }
+    return { imageId: obj.imageId };
+  },
+  handler: async ({ supabase, user, body }) => {
+    // Verify ownership via join + fetch storage path
+    const { data: image } = await supabase
+      .from("restaurant_images")
+      .select("id, storage_path, restaurants!inner(user_id)")
+      .eq("id", body.imageId)
+      .single();
 
-export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    const ownerId = (image as { restaurants?: { user_id: string } } | null)?.restaurants?.user_id;
+    if (!image || ownerId !== user.id) {
+      return NextResponse.json({ error: "Image not found" }, { status: 403 });
+    }
 
-  const rl = checkRateLimit({ key: `${user.id}:ai`, perMinute: 10, perDay: 100 });
-  const rlRes = rateLimitResponse(rl);
-  if (rlRes) return rlRes;
+    const imageUrl = `${process.env.NEXT_PUBLIC_IMAGE_BASE_URL}/${image.storage_path}`;
+    const imageRes = await fetch(imageUrl);
+    if (!imageRes.ok) {
+      return NextResponse.json({ error: "Image fetch failed" }, { status: 502 });
+    }
 
-  const { imageId } = await request.json().catch(() => ({}));
-  if (!imageId || typeof imageId !== "string") {
-    return NextResponse.json({ error: "imageId required" }, { status: 400 });
-  }
+    const contentType = imageRes.headers.get("content-type") ?? "image/jpeg";
+    const buf = Buffer.from(await imageRes.arrayBuffer());
+    if (buf.byteLength > MAX_BYTES) {
+      return NextResponse.json({ error: "Image too large for analysis" }, { status: 413 });
+    }
+    const base64 = buf.toString("base64");
 
-  // Verify ownership via join + fetch storage path
-  const { data: image } = await supabase
-    .from("restaurant_images")
-    .select("id, storage_path, restaurants!inner(user_id)")
-    .eq("id", imageId)
-    .single();
-
-  const ownerId = (image as { restaurants?: { user_id: string } } | null)?.restaurants?.user_id;
-  if (!image || ownerId !== user.id) {
-    return NextResponse.json({ error: "Image not found" }, { status: 403 });
-  }
-
-  // Fetch image from MinIO (public URL)
-  const imageUrl = `${process.env.NEXT_PUBLIC_IMAGE_BASE_URL}/${image.storage_path}`;
-  const imageRes = await fetch(imageUrl);
-  if (!imageRes.ok) {
-    return NextResponse.json({ error: "Image fetch failed" }, { status: 502 });
-  }
-
-  const contentType = imageRes.headers.get("content-type") ?? "image/jpeg";
-  const buf = Buffer.from(await imageRes.arrayBuffer());
-  if (buf.byteLength > MAX_BYTES) {
-    return NextResponse.json({ error: "Image too large for analysis" }, { status: 413 });
-  }
-  const base64 = buf.toString("base64");
-
-  const prompt = `이 사진은 한 음식점의 사진입니다. 메뉴 사진, 매장 외관, 메뉴판, 음료 등 어떤 종류든 분석해서 음식점 카테고리를 추정해 주세요.
+    const prompt = `이 사진은 한 음식점의 사진입니다. 메뉴 사진, 매장 외관, 메뉴판, 음료 등 어떤 종류든 분석해서 음식점 카테고리를 추정해 주세요.
 
 **가능한 카테고리 (반드시 이 중 하나):**
 - 한식: 한국 음식 (찌개, 김치, 비빔밥, 분식, 치킨, 삼겹살 등)
@@ -78,19 +73,12 @@ export async function POST(request: NextRequest) {
 
 사진이 음식과 무관하면 confidence를 "low"로 하고 category를 "기타"로.`;
 
-  try {
     const result = await generateJSONWithImage<AnalysisResult>(prompt, base64, contentType, {
       temperature: 0.3,
       maxOutputTokens: 400,
     });
 
-    // Normalize category
-    const valid = ["한식", "중식", "일식", "양식", "카페", "술집", "디저트", "기타"];
-    if (!valid.includes(result.category)) result.category = "기타";
-
-    return NextResponse.json(result);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "AI error";
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
-}
+    if (!VALID_CATEGORIES.includes(result.category)) result.category = "기타";
+    return result;
+  },
+});
