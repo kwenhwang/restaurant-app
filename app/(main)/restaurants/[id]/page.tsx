@@ -26,6 +26,7 @@ import TagList from "@/components/restaurants/TagList";
 import RankPanel from "@/components/restaurants/RankPanel";
 import BlogReviewsSection from "@/components/restaurants/BlogReviewsSection";
 import AddToCollectionButton from "@/components/collections/AddToCollectionButton";
+import InlineMemo from "@/components/restaurants/InlineMemo";
 import { categoryStyle } from "@/lib/category-icons";
 import { tryCachedMenu } from "@/lib/menu-cache-lookup";
 import { rankAll } from "@/lib/rankings";
@@ -382,18 +383,10 @@ export default async function RestaurantDetailPage({
           </Sec>
         )}
 
-        {/* MEMO */}
-        {restaurant.note && (
-          <Sec index={6} title="메모">
-            <div
-              className="p-5"
-              style={{ borderRadius: 20, background: "var(--surface)", boxShadow: "var(--shadow-1)" }}
-            >
-              <div className="font-display text-[46px]" style={{ color: "var(--accent)", lineHeight: 0.3, height: 22 }}>“</div>
-              <p className="font-display text-[17px] font-medium leading-[1.7]">{restaurant.note}</p>
-            </div>
-          </Sec>
-        )}
+        {/* MEMO — inline editable */}
+        <Sec index={6} title="메모">
+          <InlineMemo restaurantId={id} initial={restaurant.note ?? null} />
+        </Sec>
 
         {/* VISITS */}
         <section id="visits" className="px-[18px] pt-7" style={{ scrollMarginTop: 80 }}>

@@ -7,7 +7,7 @@ import { test, expect } from "@playwright/test";
 import { waitForHydration, waitForInteractive } from "./helpers";
 
 test.describe("memo edit", () => {
-  test("editing the memo persists across reload", async ({ page }) => {
+  test("inline memo edit on detail page persists across reload", async ({ page }) => {
     await page.goto("/");
     await waitForHydration(page);
 
@@ -19,25 +19,30 @@ test.describe("memo edit", () => {
     const href = await firstCard.getAttribute("href");
     expect(href).toBeTruthy();
 
-    await page.goto(`${href!}/edit`);
-    await waitForInteractive(page, 'textarea[name="note"]');
+    await page.goto(href!);
+    await waitForHydration(page);
 
     const stamp = `playwright-${Date.now()}`;
-    const memo = `이건 E2E 테스트 메모입니다 ${stamp}`;
-    await page.locator('textarea[name="note"]').fill(memo);
+    const memo = `E2E 테스트 메모 ${stamp}`;
 
-    // Submit button enabled after fill (depends on name not being empty —
-    // which it isn't, the page loaded with existing restaurant data)
-    await page.waitForFunction(
-      () => !(document.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,
-      undefined,
-      { timeout: 5_000 },
-    );
-    await page.getByRole("button", { name: /수정 저장/ }).click();
+    // Tap into edit mode — either via the empty-state "메모 추가" button or
+    // by tapping the existing memo card to enter edit mode.
+    const addBtn = page.getByRole("button", { name: /메모 추가/ });
+    const editBtn = page.getByRole("button", { name: /메모 편집/ });
+    if (await addBtn.count() > 0) {
+      await addBtn.click();
+    } else {
+      await editBtn.first().click();
+    }
 
-    // Should land on the detail page
-    await expect(page).toHaveURL(new RegExp(`${href!}$`));
-    // router.refresh might serve cached page; reload to confirm DB write
+    // Replace value
+    const textarea = page.locator('textarea').first();
+    await expect(textarea).toBeVisible();
+    await textarea.fill(memo);
+    await page.getByRole("button", { name: "저장", exact: true }).click();
+
+    // Verify it's persisted by reloading
+    await page.waitForTimeout(800);
     await page.reload();
     await waitForHydration(page);
     await expect(page.getByText(stamp)).toBeVisible();
