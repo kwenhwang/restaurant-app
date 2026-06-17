@@ -21,6 +21,37 @@ export function score(r: { rating: number | null; visit_count: number }): number
   return rating * 20 + visits * 2;
 }
 
+/**
+ * Elo-aware ranking: rows with an entry in `eloMap` sort first (by Elo desc),
+ * then any score-less rows fall back to the legacy formula. Used wherever
+ * we need a consistent rank across the user's restaurants since the
+ * pairwise system was introduced.
+ */
+export function rankAllByElo(
+  restaurants: Rankable[],
+  eloMap: Map<string, number>,
+): Map<string, number> {
+  const sorted = [...restaurants].sort((a, b) => {
+    const aElo = eloMap.get(a.id);
+    const bElo = eloMap.get(b.id);
+    if (aElo != null && bElo != null) {
+      if (aElo !== bElo) return bElo - aElo;
+    } else if (aElo != null) {
+      return -1;
+    } else if (bElo != null) {
+      return 1;
+    }
+    const ds = score(b) - score(a);
+    if (ds !== 0) return ds;
+    const dv = (b.visit_count ?? 0) - (a.visit_count ?? 0);
+    if (dv !== 0) return dv;
+    return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+  });
+  const m = new Map<string, number>();
+  sorted.forEach((r, i) => m.set(r.id, i + 1));
+  return m;
+}
+
 /** Returns a Map<restaurant_id, rank> where rank starts at 1 (best). */
 export function rankAll(restaurants: Rankable[]): Map<string, number> {
   const sorted = [...restaurants].sort((a, b) => {

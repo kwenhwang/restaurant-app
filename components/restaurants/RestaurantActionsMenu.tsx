@@ -58,6 +58,11 @@ export default function RestaurantActionsMenu({ restaurantId, restaurantName, de
     router.push(`/restaurants/${restaurantId}/edit`);
   }
 
+  function rerank() {
+    setOpen(false);
+    router.push(`/restaurants/${restaurantId}/rank?mode=rerank`);
+  }
+
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -88,6 +93,7 @@ export default function RestaurantActionsMenu({ restaurantId, restaurantName, de
           }}
         >
           <MenuItem onClick={edit} icon="square.and.pencil" label="수정" />
+          <MenuItem onClick={rerank} icon="sparkles" label="다시 비교하기" />
           <MenuItem onClick={share} icon="arrow.up.right" label="공유" />
           <Divider />
           <MenuItem

@@ -233,7 +233,9 @@ export default function CaptureFlow() {
         }).catch(() => {});
       }
 
-      router.push(`/restaurants/${restaurantId}`);
+      // Go straight into the pairwise ranking flow so the user sets a tier
+      // and (when there are existing restaurants) compares against them.
+      router.push(`/restaurants/${restaurantId}/rank`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "저장 실패";
       alert(msg);
@@ -458,27 +460,12 @@ export default function CaptureFlow() {
           />
         </div>
 
-        {/* Rating — always visible */}
-        <div className="rounded-2xl p-4 bg-white mt-3" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
-          <div className="text-[13px] font-semibold mb-2" style={{ color: "var(--text-2)" }}>
-            평점 (선택)
-          </div>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setRating(rating === n ? null : n)}
-                className="flex-1 h-11 rounded-xl text-[20px]"
-                style={{
-                  background:
-                    rating !== null && n <= rating ? "var(--accent-soft)" : "var(--bg)",
-                  color: rating !== null && n <= rating ? "var(--accent)" : "var(--text-3)",
-                }}
-              >
-                ★
-              </button>
-            ))}
+        {/* Tier-based ranking happens AFTER save on /rank. The old star
+            rating input was removed — overall ranking now comes from
+            pairwise comparisons. The DB column remains for compat. */}
+        <div className="rounded-2xl p-3.5 mt-3" style={{ background: "var(--accent-soft)" }}>
+          <div className="text-[13px]" style={{ color: "var(--accent-press)" }}>
+            ✨ 저장 후 대결 평가로 순위를 정해요
           </div>
         </div>
 

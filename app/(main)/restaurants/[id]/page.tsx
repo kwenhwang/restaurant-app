@@ -29,7 +29,6 @@ import AddToCollectionButton from "@/components/collections/AddToCollectionButto
 import InlineMemo from "@/components/restaurants/InlineMemo";
 import { categoryStyle } from "@/lib/category-icons";
 import { tryCachedMenu } from "@/lib/menu-cache-lookup";
-import { rankAll } from "@/lib/rankings";
 import { ensureShareToken } from "./share-action";
 import { applyCategory } from "./category-action";
 import { saveMenu } from "./menu-action";
@@ -105,24 +104,46 @@ export default async function RestaurantDetailPage({
     visitMap.set(v.restaurant_id, (visitMap.get(v.restaurant_id) ?? 0) + 1);
   }
 
+  // Elo-based ranking from restaurant_scores (backfilled). Falls back to
+  // legacy formula only for rows still missing a score row.
+  const { data: allScores } = await supabase
+    .from("restaurant_scores")
+    .select("restaurant_id, elo")
+    .eq("user_id", user!.id);
+  const eloMap = new Map<string, number>();
+  for (const s of allScores ?? []) eloMap.set(s.restaurant_id, s.elo);
+
   const rankInput = (allR ?? []).map((r) => ({
     id: r.id,
     rating: r.rating,
     visit_count: visitMap.get(r.id) ?? 0,
     created_at: r.created_at,
+    elo: eloMap.get(r.id) ?? null,
   }));
-  const rankMap = rankAll(rankInput);
+  // Sort by Elo desc when available, else legacy score
+  const sorted = [...rankInput].sort((a, b) => {
+    if (a.elo != null && b.elo != null) return b.elo - a.elo;
+    if (a.elo != null) return -1;
+    if (b.elo != null) return 1;
+    // both null — legacy
+    const aScore = (a.rating ?? 0) * 20 + Math.min(a.visit_count, 10) * 2;
+    const bScore = (b.rating ?? 0) * 20 + Math.min(b.visit_count, 10) * 2;
+    return bScore - aScore;
+  });
+  const rankMap = new Map<string, number>();
+  sorted.forEach((r, i) => rankMap.set(r.id, i + 1));
   const totalRestaurants = rankInput.length;
   const rank = rankMap.get(id) ?? totalRestaurants;
 
   let categoryRank: number | undefined;
   let categoryTotal: number | undefined;
   if (restaurant.category) {
-    const sameCat = rankInput.filter(
-      (r) => allR?.find((x) => x.id === r.id)?.category === restaurant.category
+    const sameCat = sorted.filter(
+      (r) => allR?.find((x) => x.id === r.id)?.category === restaurant.category,
     );
     categoryTotal = sameCat.length;
-    const catRankMap = rankAll(sameCat);
+    const catRankMap = new Map<string, number>();
+    sameCat.forEach((r, i) => catRankMap.set(r.id, i + 1));
     categoryRank = catRankMap.get(id);
   }
 

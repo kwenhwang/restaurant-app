@@ -13,7 +13,7 @@ import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import RevisitNudge from "@/components/home/RevisitNudge";
 import { LargeTitle } from "@/components/ui/LargeTitle";
 import Sym from "@/components/ui/Sym";
-import { rankAll } from "@/lib/rankings";
+import { rankAllByElo } from "@/lib/rankings";
 import { pickRevisitCandidates } from "@/lib/revisit";
 
 const DEFAULT_CATEGORIES = ["전체", "한식", "일식", "중식", "양식", "카페", "술집", "기타"];
@@ -88,7 +88,14 @@ export default async function HomePage() {
     tags: tagMap.get(r.id) ?? [],
   }));
 
-  const rankMap = rankAll(decorated);
+  const { data: scoreRows } = await supabase
+    .from("restaurant_scores")
+    .select("restaurant_id, elo")
+    .eq("user_id", user!.id);
+  const eloMap = new Map<string, number>();
+  for (const s of scoreRows ?? []) eloMap.set(s.restaurant_id, s.elo);
+
+  const rankMap = rankAllByElo(decorated, eloMap);
   const list = decorated.map((r) => ({ ...r, rank: rankMap.get(r.id) }));
 
   const count = list.length;
