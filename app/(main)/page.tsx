@@ -10,6 +10,8 @@ import HomeFilters from "@/components/home/HomeFilters";
 import AIRecommend from "@/components/home/AIRecommend";
 import AIDiscover from "@/components/home/AIDiscover";
 import FriendCollectionsSection from "@/components/home/FriendCollectionsSection";
+import MonthlyReportBanner from "@/components/home/MonthlyReportBanner";
+import { buildMonthlyReport } from "@/lib/monthly-report";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import RevisitNudge from "@/components/home/RevisitNudge";
 import { LargeTitle } from "@/components/ui/LargeTitle";
@@ -141,6 +143,38 @@ export default async function HomePage() {
       />
 
       <RevisitNudge candidates={pickRevisitCandidates(list, 3)} />
+
+      {(() => {
+        // Previous-month banner: surface only on the 1st–10th of the
+        // current month, and only when last month has 3+ visits.
+        const today = new Date();
+        if (today.getDate() > 10) return null;
+        const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const yyyymm = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+        const report = buildMonthlyReport({
+          yyyymm,
+          restaurants: list.map((r) => ({
+            id: r.id,
+            name: r.name,
+            category: r.category ?? null,
+            address: r.address ?? null,
+            rating: r.rating ?? null,
+            created_at: r.created_at ?? null,
+          })),
+          visits: (visitsData ?? []).map((v) => ({
+            restaurant_id: v.restaurant_id,
+            visited_at: v.visited_at,
+          })),
+        });
+        if (report.visits < 3) return null;
+        return (
+          <MonthlyReportBanner
+            yyyymm={yyyymm}
+            visitsCount={report.visits}
+            topCategory={report.categoryShare[0]?.category ?? null}
+          />
+        );
+      })()}
 
       <AIRecommend
         restaurants={list.map((r) => ({

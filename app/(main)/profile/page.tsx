@@ -93,6 +93,14 @@ export default async function ProfilePage() {
             <span className="text-[15px]">컬렉션</span>
             <span style={{ color: "var(--text-3)", fontSize: 16 }}>›</span>
           </Link>
+          <Link
+            href="/profile/reports"
+            className="flex items-center justify-between px-4 h-[52px]"
+            style={{ borderTop: "0.5px solid var(--separator)" }}
+          >
+            <span className="text-[15px]">월간 미식 리포트</span>
+            <span style={{ color: "var(--text-3)", fontSize: 16 }}>›</span>
+          </Link>
         </Group>
       </Sec>
 
