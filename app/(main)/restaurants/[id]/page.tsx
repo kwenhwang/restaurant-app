@@ -8,12 +8,11 @@
 // Working sub-components (PlaceInfoGroup, TagList, RankPanel, AddVisit,
 // VisitList, ImageUpload, FindMenuButton, RestaurantActionsMenu) are reused.
 
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { deleteImage } from "@/lib/storage";
 import ImageUpload from "@/components/restaurants/ImageUpload";
 import RestaurantActionsMenu from "@/components/restaurants/RestaurantActionsMenu";
 import RestaurantStickyHeader from "@/components/restaurants/RestaurantStickyHeader";
@@ -27,6 +26,7 @@ import RankPanel from "@/components/restaurants/RankPanel";
 import BlogReviewsSection from "@/components/restaurants/BlogReviewsSection";
 import AddToCollectionButton from "@/components/collections/AddToCollectionButton";
 import InlineMemo from "@/components/restaurants/InlineMemo";
+import { deleteRestaurant } from "./delete-action";
 import { categoryStyle } from "@/lib/category-icons";
 import { tryCachedMenu } from "@/lib/menu-cache-lookup";
 import { ensureShareToken } from "./share-action";
@@ -147,31 +147,9 @@ export default async function RestaurantDetailPage({
     categoryRank = catRankMap.get(id);
   }
 
-  async function deleteRestaurant() {
-    "use server";
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) redirect("/login");
-
-    const { data: imgs } = await supabase
-      .from("restaurant_images")
-      .select("storage_path")
-      .eq("restaurant_id", id);
-
-    const { error: delErr } = await supabase
-      .from("restaurants")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
-    if (delErr) throw delErr;
-
-    for (const i of imgs ?? []) {
-      await deleteImage(i.storage_path).catch(() => {});
-    }
-    redirect("/");
-  }
+  // deleteRestaurant now lives in a separate `delete-action.ts` file and
+  // takes restaurantId as an explicit parameter — avoiding closure capture
+  // that production builds can mishandle.
 
   const primary =
     restaurant.images?.find((i: { is_primary?: boolean }) => i.is_primary) ??
@@ -219,6 +197,8 @@ export default async function RestaurantDetailPage({
             deleteAction={deleteRestaurant}
             ensureShareToken={ensureShareToken}
           />
+          {/* deleteRestaurant 시그니처가 (id) => result 로 바뀜 — ActionsMenu가
+              restaurantId 호출 + result 처리 + 라우팅 담당 */}
         </div>
 
         {restaurant.images && restaurant.images.length > 1 && (

@@ -7,7 +7,12 @@ import Sym from "@/components/ui/Sym";
 interface Props {
   restaurantId: string;
   restaurantName: string;
-  deleteAction: () => Promise<void>;
+  /**
+   * Server action that deletes the restaurant. Takes the id explicitly
+   * (avoid closure capture in server actions — Next.js production builds
+   * can mishandle it). Returns ok/error so we control navigation here.
+   */
+  deleteAction: (restaurantId: string) => Promise<{ ok: true } | { error: string }>;
   ensureShareToken: (id: string) => Promise<string>;
 }
 
@@ -66,7 +71,14 @@ export default function RestaurantActionsMenu({ restaurantId, restaurantName, de
   async function handleDelete() {
     setDeleting(true);
     try {
-      await deleteAction();
+      const res = await deleteAction(restaurantId);
+      if ("error" in res) {
+        alert(res.error);
+        return;
+      }
+      // Navigate to home after a successful delete.
+      router.push("/");
+      router.refresh();
     } finally {
       setDeleting(false);
     }
