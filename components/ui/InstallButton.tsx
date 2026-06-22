@@ -105,7 +105,8 @@ export default function InstallButton() {
           onClick={() => setShowIOSHelp(false)}
         >
           <div
-            className="w-full bg-white rounded-t-3xl p-6 space-y-3"
+            className="w-full rounded-t-3xl p-6 space-y-3"
+            style={{ background: "var(--surface)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-[17px] font-bold">홈 화면에 추가</h3>

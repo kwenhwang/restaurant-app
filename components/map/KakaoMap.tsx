@@ -146,8 +146,8 @@ export default function KakaoMap({ restaurants }: Props) {
 
       {selected && (
         <div
-          className="absolute left-3 right-3 bottom-3 rounded-2xl bg-white p-4"
-          style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}
+          className="absolute left-3 right-3 bottom-3 rounded-2xl p-4"
+          style={{ background: "var(--surface)", boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">

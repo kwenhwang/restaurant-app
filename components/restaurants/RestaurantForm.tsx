@@ -128,7 +128,7 @@ export default function RestaurantForm({ action, restaurant }: Props) {
       </div>
 
       {error && (
-        <p className="text-[13px] px-1" style={{ color: "#D14343" }}>
+        <p className="text-[13px] px-1" style={{ color: "var(--error)" }}>
           ⚠️ {error}
         </p>
       )}

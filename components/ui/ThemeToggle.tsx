@@ -25,7 +25,7 @@ function apply(theme: Theme) {
         : "light"
       : theme;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", effective === "dark" ? "#000000" : "#FF6F3D");
+  if (meta) meta.setAttribute("content", effective === "dark" ? "#0C0B0A" : "#FF6F3D");
 }
 
 export default function ThemeToggle() {

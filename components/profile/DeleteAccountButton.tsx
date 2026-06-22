@@ -33,7 +33,7 @@ export default function DeleteAccountButton({ deleteAccount }: Props) {
         type="button"
         onClick={() => setOpen(true)}
         className="w-full h-11 rounded-2xl text-[14px] font-semibold"
-        style={{ background: "transparent", color: "#FF3B30" }}
+        style={{ background: "transparent", color: "var(--error)" }}
       >
         계정 삭제
       </button>
@@ -45,12 +45,13 @@ export default function DeleteAccountButton({ deleteAccount }: Props) {
           onClick={() => !pending && setOpen(false)}
         >
           <div
-            className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3"
+            className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-3"
+            style={{ background: "var(--surface)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-[17px] font-bold">계정을 삭제할까요?</h3>
             <p className="text-[14px]" style={{ color: "var(--text-2)" }}>
-              아래 데이터가 <strong style={{ color: "#FF3B30" }}>모두 영구 삭제</strong>되며,
+              아래 데이터가 <strong style={{ color: "var(--error)" }}>모두 영구 삭제</strong>되며,
               복구할 수 없어요.
             </p>
             <ul
@@ -80,7 +81,7 @@ export default function DeleteAccountButton({ deleteAccount }: Props) {
               />
             </div>
             {error && (
-              <p className="text-[13px]" style={{ color: "#FF3B30" }}>
+              <p className="text-[13px]" style={{ color: "var(--error)" }}>
                 {error}
               </p>
             )}
@@ -98,8 +99,8 @@ export default function DeleteAccountButton({ deleteAccount }: Props) {
                 type="button"
                 onClick={handleDelete}
                 disabled={pending || confirmText !== "삭제"}
-                className="flex-1 h-12 rounded-2xl text-white font-bold disabled:opacity-50"
-                style={{ background: "#FF3B30" }}
+                className="flex-1 h-12 rounded-2xl font-bold disabled:opacity-50"
+                style={{ background: "var(--error)", color: "var(--text-inverse)" }}
               >
                 {pending ? "삭제 중…" : "영구 삭제"}
               </button>

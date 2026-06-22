@@ -437,7 +437,7 @@ export default function CaptureFlow() {
         <div
           className="rounded-2xl p-3.5 flex items-center gap-3"
           style={{
-            background: picked?.kind === "manual" ? "var(--accent-soft)" : "white",
+            background: picked?.kind === "manual" ? "var(--accent-soft)" : "var(--surface)",
             boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
             border:
               picked?.kind === "manual"
@@ -470,7 +470,7 @@ export default function CaptureFlow() {
         </div>
 
         {/* Memo — always visible */}
-        <div className="rounded-2xl p-4 bg-white" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+        <div className="rounded-2xl p-4" style={{ background: "var(--surface)", boxShadow: "var(--shadow-1)" }}>
           <div className="text-[13px] font-semibold mb-1" style={{ color: "var(--text-2)" }}>
             한 줄 메모 (선택)
           </div>
@@ -573,7 +573,7 @@ function Candidate({ title, subtitle, badge, selected, image, category, onClick 
       onClick={onClick}
       className="w-full rounded-2xl p-3 flex items-center gap-3 transition-colors text-left"
       style={{
-        background: selected ? "var(--accent-soft)" : "white",
+        background: selected ? "var(--accent-soft)" : "var(--surface)",
         boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
       }}
     >

@@ -28,7 +28,7 @@ export default function DeleteCollectionButton({ action, redirectTo = "/collecti
       onClick={handleClick}
       disabled={pending}
       className="w-full h-11 rounded-full text-[13px] font-bold"
-      style={{ background: "var(--surface)", color: "#D14343" }}
+      style={{ background: "var(--surface)", color: "var(--error)" }}
     >
       {pending ? "삭제 중…" : "컬렉션 삭제"}
     </button>

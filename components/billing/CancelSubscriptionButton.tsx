@@ -43,12 +43,12 @@ export default function CancelSubscriptionButton() {
         onClick={handleClick}
         disabled={pending}
         className="w-full h-12 rounded-full text-[14px] font-bold"
-        style={{ background: "var(--surface)", color: "#D14343" }}
+        style={{ background: "var(--surface)", color: "var(--error)" }}
       >
         {pending ? "처리 중…" : "구독 해지"}
       </button>
       {error && (
-        <p className="text-[12px] px-1" style={{ color: "#D14343" }}>
+        <p className="text-[12px] px-1" style={{ color: "var(--error)" }}>
           ⚠️ {error}
         </p>
       )}

@@ -98,9 +98,10 @@ export default function RestaurantActionsMenu({ restaurantId, restaurantName, de
 
       {open && (
         <div
-          className="absolute right-0 top-12 z-30 rounded-2xl overflow-hidden bg-white"
+          className="absolute right-0 top-12 z-30 rounded-2xl overflow-hidden"
           style={{
             minWidth: 180,
+            background: "var(--surface)",
             boxShadow: "0 10px 30px rgba(0,0,0,0.18)",
           }}
         >
@@ -124,7 +125,8 @@ export default function RestaurantActionsMenu({ restaurantId, restaurantName, de
           onClick={() => !deleting && setConfirming(false)}
         >
           <div
-            className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-6 space-y-3"
+            className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 space-y-3"
+            style={{ background: "var(--surface)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-[17px] font-bold">정말 삭제할까요?</h3>
@@ -143,8 +145,8 @@ export default function RestaurantActionsMenu({ restaurantId, restaurantName, de
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex-1 h-[44px] rounded-2xl text-white font-semibold disabled:opacity-50"
-                style={{ background: "#FF3B30" }}
+                className="flex-1 h-[44px] rounded-2xl font-semibold disabled:opacity-50"
+                style={{ background: "var(--error)", color: "var(--text-inverse)" }}
               >
                 {deleting ? "삭제 중..." : "삭제"}
               </button>
@@ -172,7 +174,7 @@ function MenuItem({
       type="button"
       onClick={onClick}
       className="w-full flex items-center gap-3 px-4 h-[48px] text-left hover:opacity-70 active:opacity-60"
-      style={{ color: danger ? "#FF3B30" : "var(--text)" }}
+      style={{ color: danger ? "var(--error)" : "var(--text)" }}
     >
       <Sym name={icon} size={18} />
       <span className="text-[15px] font-medium">{label}</span>

@@ -79,8 +79,9 @@ export default function PullToRefresh() {
       }}
     >
       <div
-        className="mt-2 w-9 h-9 rounded-full bg-white flex items-center justify-center"
+        className="mt-2 w-9 h-9 rounded-full flex items-center justify-center"
         style={{
+          background: "var(--surface)",
           boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
           opacity: progress,
         }}

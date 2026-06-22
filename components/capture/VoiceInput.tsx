@@ -155,13 +155,13 @@ export default function VoiceInput({ onParsed }: Props) {
           disabled={parsing}
           aria-label={listening ? "녹음 중단" : "녹음 시작"}
           className="w-11 h-11 rounded-full flex items-center justify-center text-white relative transition-transform active:scale-95 disabled:opacity-50"
-          style={{ background: listening ? "#FF3B30" : "var(--accent)" }}
+          style={{ background: listening ? "var(--error)" : "var(--accent)" }}
         >
           {listening && (
             <span
               className="absolute inset-0 rounded-full"
               style={{
-                background: "#FF3B30",
+                background: "var(--error)",
                 opacity: 0.4,
                 animation: "voice-pulse 1.4s ease-out infinite",
               }}
@@ -198,7 +198,7 @@ export default function VoiceInput({ onParsed }: Props) {
       {fullText && (
         <div
           className="rounded-xl p-2.5 text-[14px]"
-          style={{ background: "white", color: "var(--text)" }}
+          style={{ background: "var(--surface)", color: "var(--text)" }}
         >
           <span>{transcript}</span>
           {interim && (
@@ -208,7 +208,7 @@ export default function VoiceInput({ onParsed }: Props) {
       )}
 
       {error && (
-        <p className="text-[12px] mt-2" style={{ color: "#FF3B30" }}>
+        <p className="text-[12px] mt-2" style={{ color: "var(--error)" }}>
           {error}
         </p>
       )}

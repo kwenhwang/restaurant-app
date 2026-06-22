@@ -123,7 +123,8 @@ export default function BugReportButton({ submit }: Props) {
           onClick={close}
         >
           <div
-            className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3 max-h-[92vh] overflow-y-auto"
+            className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-3 max-h-[92vh] overflow-y-auto"
+            style={{ background: "var(--surface)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -229,7 +230,7 @@ export default function BugReportButton({ submit }: Props) {
                   <span>{message.length}/2000</span>
                 </div>
                 {error && (
-                  <p className="text-[13px]" style={{ color: "#FF3B30" }}>
+                  <p className="text-[13px]" style={{ color: "var(--error)" }}>
                     {error}
                   </p>
                 )}

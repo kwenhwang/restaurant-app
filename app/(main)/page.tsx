@@ -47,8 +47,8 @@ export default async function HomePage() {
           trailing={
             <Link
               href="/profile"
-              className="w-10 h-10 rounded-full bg-white flex items-center justify-center"
-              style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(0,0,0,0.06)" }}
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: "var(--surface)", boxShadow: "var(--shadow-1)" }}
             >
               <Sym name="sparkles" size={18} />
             </Link>

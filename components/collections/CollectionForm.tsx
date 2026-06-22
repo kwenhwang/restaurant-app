@@ -109,7 +109,7 @@ export default function CollectionForm({ mode, action, initial, cancelHref }: Pr
       </div>
 
       {error && (
-        <p className="text-[13px] px-1" style={{ color: "#D14343" }}>
+        <p className="text-[13px] px-1" style={{ color: "var(--error)" }}>
           ⚠️ {error}
         </p>
       )}

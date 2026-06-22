@@ -107,7 +107,7 @@ export default function MenuExtractor({ restaurantId, imageId, saveMenu }: Props
       )}
 
       {error && (
-        <div className="text-[13px]" style={{ color: "#FF3B30" }}>
+        <div className="text-[13px]" style={{ color: "var(--error)" }}>
           {error}
         </div>
       )}
@@ -166,7 +166,7 @@ export default function MenuExtractor({ restaurantId, imageId, saveMenu }: Props
               type="button"
               onClick={() => setResult(null)}
               className="px-4 h-9 rounded-xl text-[13px] font-semibold"
-              style={{ background: "white", color: "var(--text-2)" }}
+              style={{ background: "var(--surface)", color: "var(--text-2)" }}
             >
               닫기
             </button>

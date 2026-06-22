@@ -39,7 +39,7 @@ export default function LocationConsent({ onDecision }: Props) {
       className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center"
       style={{ background: "rgba(0,0,0,0.4)" }}
     >
-      <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 space-y-4">
+      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-4" style={{ background: "var(--surface)" }}>
         <div className="flex items-center gap-2">
           <span className="text-[28px]">📍</span>
           <h3 className="text-[17px] font-bold">위치 정보를 사용해도 될까요?</h3>

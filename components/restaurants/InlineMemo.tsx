@@ -114,7 +114,7 @@ export default function InlineMemo({ restaurantId, initial }: Props) {
             }}
           />
           {error && (
-            <p className="text-[12px] mt-2" style={{ color: "#D14343" }}>
+            <p className="text-[12px] mt-2" style={{ color: "var(--error)" }}>
               ⚠️ {error}
             </p>
           )}
