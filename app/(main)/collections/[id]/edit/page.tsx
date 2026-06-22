@@ -26,10 +26,9 @@ export default async function EditCollectionPage({ params }: Props) {
 
   if (!c) notFound();
 
-  async function handleDelete() {
-    "use server";
-    await deleteCollection(id);
-  }
+  // Bind id at the page boundary instead of capturing it via inline
+  // closure — same defensive pattern as deleteRestaurant.
+  const handleDelete = deleteCollection.bind(null, id);
 
   return (
     <div className="pb-24">
