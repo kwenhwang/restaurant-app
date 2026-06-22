@@ -61,7 +61,9 @@ else router.push(`/.../${result.id}`);
 
 서버 액션은 `redirect()` 대신 `{ id }` 또는 `{ error }` 반환. `redirect()`는 `startTransition` 안에서 삼켜짐.
 
-레퍼런스: `components/collections/CollectionForm.tsx`, `components/restaurants/RestaurantForm.tsx`.
+**인라인 클로저 server action 금지** — `page.tsx` 안에 `async function foo() { "use server"; ... }`로 outer scope의 `id`를 캡처하면 production build에서 가끔 `id`가 잡히지 않아 silent fail (commit `e4eb2e7` `0878af4` 참조). 대신 별도 파일 (`delete-action.ts`, `update-action.ts`)로 분리하고 `id`를 명시 인자로 받거나 `action.bind(null, id)`로 react가 직렬화하게 할 것.
+
+레퍼런스: `components/collections/CollectionForm.tsx`, `components/restaurants/RestaurantForm.tsx`, `app/(main)/restaurants/[id]/{delete,update}-action.ts`.
 
 ### 3.2 AI 라우트
 
