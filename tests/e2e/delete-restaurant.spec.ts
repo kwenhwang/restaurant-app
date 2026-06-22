@@ -1,16 +1,58 @@
 // E2E: restaurant delete flow
-// Creates a throwaway restaurant via the REST API (no UI capture flow,
-// avoids polluting other tests with extra cards), then deletes via the
-// detail-page actions menu. Verifies the row is GONE from the DB and the
-// page redirects.
+// Creates a throwaway restaurant via direct REST calls to the Supabase
+// admin endpoints (no @supabase/supabase-js to avoid Node-20 realtime/ws
+// init issues on CI). Then deletes it via the detail-page actions menu
+// and verifies the DB row is gone.
 
 import { test, expect } from "@playwright/test";
 import { waitForHydration } from "./helpers";
-import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const E2E_EMAIL = process.env.E2E_TEST_EMAIL ?? "kwenhwang@gmail.com";
+
+const adminHeaders = {
+  apikey: SERVICE_ROLE,
+  Authorization: `Bearer ${SERVICE_ROLE}`,
+  "Content-Type": "application/json",
+  Prefer: "return=representation",
+};
+
+async function findUserId(): Promise<string> {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=200`, {
+    headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` },
+  });
+  const json = (await res.json()) as { users?: { id: string; email: string }[] };
+  const u = (json.users ?? []).find((x) => x.email === E2E_EMAIL);
+  if (!u) throw new Error(`test user ${E2E_EMAIL} not found`);
+  return u.id;
+}
+
+async function insertRestaurant(userId: string, name: string): Promise<string> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants`, {
+    method: "POST",
+    headers: adminHeaders,
+    body: JSON.stringify({ user_id: userId, name, category: "기타" }),
+  });
+  if (!res.ok) throw new Error(`insert failed: ${res.status} ${await res.text()}`);
+  const rows = (await res.json()) as { id: string }[];
+  return rows[0].id;
+}
+
+async function getRestaurant(id: string): Promise<unknown | null> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?id=eq.${id}&select=id`, {
+    headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` },
+  });
+  const rows = (await res.json()) as unknown[];
+  return rows[0] ?? null;
+}
+
+async function forceDelete(id: string): Promise<void> {
+  await fetch(`${SUPABASE_URL}/rest/v1/restaurants?id=eq.${id}`, {
+    method: "DELETE",
+    headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}` },
+  });
+}
 
 test.describe("restaurant delete", () => {
   test.beforeEach(async ({ page }) => {
@@ -18,36 +60,9 @@ test.describe("restaurant delete", () => {
   });
 
   test("delete via actions menu removes restaurant and redirects home", async ({ page }) => {
-    // Find the test user's id
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { data: users } = await admin.auth.admin.listUsers();
-    const userId = users.users.find((u) => u.email === E2E_EMAIL)?.id;
-    expect(userId, "test user must exist").toBeTruthy();
-
-    // Insert a throwaway restaurant via service role
+    const userId = await findUserId();
     const stamp = `e2e-delete-${Date.now()}`;
-    const { data: created, error: createErr } = await admin
-      .from("restaurants")
-      .insert({
-        user_id: userId,
-        name: stamp,
-        category: "기타",
-      })
-      .select("id")
-      .single();
-    expect(createErr).toBeNull();
-    const restaurantId = created!.id as string;
-
-    // Also seed a restaurant_scores row so the detail page can render
-    await admin.from("restaurant_scores").upsert({
-      restaurant_id: restaurantId,
-      user_id: userId,
-      elo: 1000,
-      comparisons_count: 0,
-      tier: null,
-    });
+    const restaurantId = await insertRestaurant(userId, stamp);
 
     try {
       await page.goto(`/restaurants/${restaurantId}`);
@@ -55,23 +70,17 @@ test.describe("restaurant delete", () => {
 
       await page.getByRole("button", { name: "더보기" }).click();
       await page.getByRole("button", { name: "삭제", exact: true }).click();
-      // Confirmation modal — click confirm button (also "삭제")
+      // Confirmation modal — click the confirm button (also labeled "삭제")
       const confirmBtn = page.getByRole("button", { name: "삭제", exact: true }).last();
       await confirmBtn.click();
 
-      // Should land on home
       await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
 
-      // DB check — restaurant must be gone
-      const { data: stillThere } = await admin
-        .from("restaurants")
-        .select("id")
-        .eq("id", restaurantId)
-        .maybeSingle();
-      expect(stillThere).toBeNull();
+      // Verify DB
+      const still = await getRestaurant(restaurantId);
+      expect(still).toBeNull();
     } finally {
-      // Belt-and-suspenders: if anything failed mid-test, force-clean
-      await admin.from("restaurants").delete().eq("id", restaurantId);
+      await forceDelete(restaurantId);
     }
   });
 });
