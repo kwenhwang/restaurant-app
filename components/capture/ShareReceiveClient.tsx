@@ -105,6 +105,48 @@ export default function ShareReceiveClient({ initialText }: { initialText: strin
     }
   }
 
+  async function wish() {
+    if (!parsed?.name) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let lat: number | null = null;
+      let lng: number | null = null;
+      if (parsed.address) {
+        try {
+          const geoRes = await fetch(
+            `/api/kakao/address?query=${encodeURIComponent(parsed.address)}`,
+          );
+          if (geoRes.ok) {
+            const g = await geoRes.json();
+            if (g.lat && g.lng) {
+              lat = parseFloat(g.lat);
+              lng = parseFloat(g.lng);
+            }
+          }
+        } catch {}
+      }
+
+      const res = await fetch("/api/wish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: parsed.name,
+          address: parsed.address,
+          lat,
+          lng,
+          category: parsed.category,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "찜 저장 실패");
+      router.push(json.collectionId ? `/collections/${json.collectionId}` : "/");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "저장 실패");
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="flex items-center justify-between px-4 pt-3.5 pb-2.5">
@@ -173,7 +215,7 @@ export default function ShareReceiveClient({ initialText }: { initialText: strin
 
       {parsed?.name && (
         <div
-          className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3 pb-6"
+          className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3 pb-6 space-y-2"
           style={{
             background: "linear-gradient(to top, var(--bg) 0%, var(--bg) 70%, transparent 100%)",
           }}
@@ -185,7 +227,16 @@ export default function ShareReceiveClient({ initialText }: { initialText: strin
             className="w-full h-[54px] rounded-2xl text-white text-[17px] font-bold disabled:opacity-50"
             style={{ background: "var(--accent)", boxShadow: "0 8px 20px rgba(255,111,61,0.28)" }}
           >
-            {saving ? "저장 중…" : "맛집으로 추가"}
+            {saving ? "저장 중…" : "맛집으로 추가 (가봤어요)"}
+          </button>
+          <button
+            type="button"
+            onClick={wish}
+            disabled={saving}
+            className="w-full h-[48px] rounded-2xl text-[15px] font-bold disabled:opacity-50"
+            style={{ background: "var(--accent-soft)", color: "var(--accent-press)" }}
+          >
+            🔖 찜만 (다음에 갈게요)
           </button>
         </div>
       )}

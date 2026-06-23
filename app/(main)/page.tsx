@@ -11,6 +11,7 @@ import AIRecommend from "@/components/home/AIRecommend";
 import AIDiscover from "@/components/home/AIDiscover";
 import FriendCollectionsSection from "@/components/home/FriendCollectionsSection";
 import MonthlyReportBanner from "@/components/home/MonthlyReportBanner";
+import QuickWishButton from "@/components/home/QuickWishButton";
 import { buildMonthlyReport } from "@/lib/monthly-report";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import RevisitNudge from "@/components/home/RevisitNudge";
@@ -132,13 +133,17 @@ export default async function HomePage() {
         title="내 맛집"
         meta={`총 ${count}곳 · 이번 달 +${thisMonth}`}
         trailing={
-          <Link
-            href="/profile"
-            className="w-10 h-10 rounded-full bg-white flex items-center justify-center"
-            style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(0,0,0,0.06)" }}
-          >
-            <Sym name="sparkles" size={18} />
-          </Link>
+          <div className="flex items-center gap-2">
+            <QuickWishButton />
+            <Link
+              href="/profile"
+              aria-label="프로필"
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: "var(--surface)", boxShadow: "var(--shadow-1)" }}
+            >
+              <Sym name="sparkles" size={18} />
+            </Link>
+          </div>
         }
       />
 

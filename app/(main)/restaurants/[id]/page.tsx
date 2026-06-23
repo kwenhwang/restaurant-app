@@ -270,6 +270,23 @@ export default async function RestaurantDetailPage({
           </div>
         </div>
 
+        {/* Wishlist CTA — surfaces when the user has never logged a visit
+            here. Most likely they added it from /api/wish or 카톡 공유. */}
+        {visitCount === 0 && (
+          <section className="px-[18px] pt-3">
+            <a
+              href="#visits"
+              className="rounded-2xl py-3 px-4 flex items-center justify-between transition-transform active:scale-[0.99]"
+              style={{ background: "var(--accent-soft)", color: "var(--accent-press)" }}
+            >
+              <span className="text-[13.5px] font-bold">
+                🔖 아직 안 가본 곳 · 가봤다면 방문 기록 남기기
+              </span>
+              <Sym name="chevron.right" size={14} strokeWidth={2.4} />
+            </a>
+          </section>
+        )}
+
         {/* Quick actions */}
         <div className="px-[18px] pt-4 flex gap-2.5">
           {restaurant.lat && restaurant.lng && (
