@@ -15,6 +15,15 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     type: "website",
   },
+  verification: {
+    // Set via env once you've registered with the consoles.
+    // Naver: https://searchadvisor.naver.com  → 사이트 등록 → 메타 태그 인증
+    // Google: https://search.google.com/search-console  → 속성 추가 → HTML 태그
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    other: process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION
+      ? { "naver-site-verification": process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION }
+      : undefined,
+  },
   applicationName: "맛집",
   appleWebApp: {
     capable: true,

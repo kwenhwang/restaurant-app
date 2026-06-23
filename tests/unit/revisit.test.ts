@@ -65,6 +65,41 @@ describe("revisit — scoring", () => {
   });
 });
 
+describe("revisit — wishlist", () => {
+  it("wishlist + never visited becomes candidate immediately (no 30-day wait)", () => {
+    const out = pickRevisitCandidates(
+      [{ id: "w", name: "찜집", rating: null, is_wishlist: true, last_visit: null }],
+      5,
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].is_wishlist).toBe(true);
+    expect(out[0].days_since).toBe(9999);
+  });
+
+  it("wishlist scores between favorite and rating", () => {
+    const out = pickRevisitCandidates(
+      [
+        { id: "fav", name: "F", rating: 4, is_favorite: true, last_visit: old },
+        { id: "wish", name: "W", rating: null, is_wishlist: true, last_visit: null },
+        { id: "rate", name: "R", rating: 4, last_visit: old },
+      ],
+      5,
+    );
+    // Favorite (60 + 25 + age) beats wish (45 + 24 cap). Wish beats plain rating.
+    const ids = out.map((c) => c.id);
+    expect(ids[0]).toBe("fav");
+    expect(ids).toContain("wish");
+  });
+
+  it("non-wishlist non-favorite low rating excluded", () => {
+    const out = pickRevisitCandidates(
+      [{ id: "low", name: "L", rating: 2, last_visit: old }],
+      5,
+    );
+    expect(out).toHaveLength(0);
+  });
+});
+
 describe("revisit — limit", () => {
   it("returns at most `limit` candidates", () => {
     const rs = Array.from({ length: 10 }, (_, i) => ({

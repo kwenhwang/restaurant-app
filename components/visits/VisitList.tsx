@@ -1,4 +1,5 @@
 import { Visit } from "@/lib/types";
+import VisitMemoCell from "./VisitMemoCell";
 
 function formatDate(d: string) {
   const date = new Date(d);
@@ -8,7 +9,12 @@ function formatDate(d: string) {
   return `${month}/${day} (${weekday})`;
 }
 
-export default function VisitList({ visits }: { visits: Visit[] }) {
+interface Props {
+  visits: Visit[];
+  restaurantId: string;
+}
+
+export default function VisitList({ visits, restaurantId }: Props) {
   if (visits.length === 0) {
     return (
       <p className="text-[14px] text-center py-4" style={{ color: "var(--text-2)" }}>
@@ -23,9 +29,7 @@ export default function VisitList({ visits }: { visits: Visit[] }) {
         <li
           key={v.id}
           className="flex items-start gap-3 py-2.5"
-          style={{
-            borderTop: i > 0 ? "1px solid var(--separator)" : "none",
-          }}
+          style={{ borderTop: i > 0 ? "1px solid var(--separator)" : "none" }}
         >
           <div
             className="text-[12px] font-semibold whitespace-nowrap pt-0.5 w-[60px]"
@@ -33,10 +37,12 @@ export default function VisitList({ visits }: { visits: Visit[] }) {
           >
             {formatDate(v.visited_at)}
           </div>
-          <div className="text-[14px] flex-1" style={{ color: "var(--text)" }}>
-            {v.memo || (
-              <span style={{ color: "var(--text-2)" }}>—</span>
-            )}
+          <div className="flex-1 min-w-0">
+            <VisitMemoCell
+              visitId={v.id}
+              restaurantId={restaurantId}
+              initial={v.memo ?? null}
+            />
           </div>
         </li>
       ))}

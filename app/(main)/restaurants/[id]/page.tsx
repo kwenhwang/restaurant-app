@@ -412,7 +412,7 @@ export default async function RestaurantDetailPage({
           <div className="p-4" style={{ borderRadius: 20, background: "var(--surface)", boxShadow: "var(--shadow-1)" }}>
             <AddVisit restaurantId={id} />
             <div className="mt-3">
-              <VisitList visits={visits ?? []} />
+              <VisitList visits={visits ?? []} restaurantId={id} />
             </div>
           </div>
         </section>

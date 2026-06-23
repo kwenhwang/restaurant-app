@@ -104,7 +104,13 @@ export default function RevisitNudge({ candidates }: Props) {
               className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
               style={{ background: "var(--accent-soft)", color: "var(--accent-press)" }}
             >
-              <Sym name="sparkles" size={9} /> 다시 가볼래요?
+              {active.is_wishlist && active.days_since >= 9000 ? (
+                <>🔖 찜해두셨네요</>
+              ) : (
+                <>
+                  <Sym name="sparkles" size={9} /> 다시 가볼래요?
+                </>
+              )}
             </span>
             {active.is_favorite && (
               <Sym name="heart.fill" size={12} className="text-[var(--accent)]" />
@@ -114,7 +120,10 @@ export default function RevisitNudge({ candidates }: Props) {
             {active.name}
           </div>
           <div className="text-[12px]" style={{ color: "var(--text-2)" }}>
-            {active.category ?? "기타"} · 마지막 방문 {daysCopy(active.days_since)}
+            {active.category ?? "기타"}
+            {active.is_wishlist && active.days_since >= 9000
+              ? " · 아직 안 가본 곳"
+              : ` · 마지막 방문 ${daysCopy(active.days_since)}`}
           </div>
         </div>
 

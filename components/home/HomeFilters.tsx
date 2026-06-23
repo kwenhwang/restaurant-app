@@ -24,6 +24,7 @@ export interface RestaurantItem {
   rating?: number | null;
   is_favorite?: boolean;
   created_at?: string;
+  note?: string | null;
   images?: Image[];
   visit_count?: number;
   last_visit?: string | null;
@@ -70,7 +71,8 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
           r.name.toLowerCase().includes(q) ||
           (r.address ?? "").toLowerCase().includes(q) ||
           (r.category ?? "").toLowerCase().includes(q) ||
-          (r.tags ?? []).some((t) => t.toLowerCase().includes(q))
+          (r.note ?? "").toLowerCase().includes(q) ||
+          (r.tags ?? []).some((t) => t.toLowerCase().includes(q)),
       );
     }
     const sorted = [...list];
@@ -104,7 +106,7 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="가게 이름, 주소, 분위기 태그"
+            placeholder="가게 이름, 주소, 메모, 분위기 태그"
             className="flex-1 bg-transparent outline-none text-[15px]"
             style={{ color: "var(--text)" }}
           />
