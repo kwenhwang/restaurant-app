@@ -6,7 +6,11 @@ import { randomBytes } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 
 function newToken() {
-  return randomBytes(8).toString("base64url");
+  // 16 bytes = 128 bits of entropy → ~22 char base64url. Cryptographically
+  // unguessable. Previously 8 bytes (64 bits) was technically brute-forceable
+  // by a dedicated attacker; not exploitable at our traffic level but no
+  // reason to leave it weak.
+  return randomBytes(16).toString("base64url");
 }
 
 async function authed() {
