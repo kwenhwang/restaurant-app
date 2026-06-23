@@ -170,6 +170,7 @@ ssh ubuntu@10.0.1.14 "cd ~/restaurant-app && git pull && pnpm build && sudo syst
 - **redirect() 안 됨**: server action에서 `redirect()`가 client `startTransition` 안에선 삼켜짐. id 반환 + client router.push로.
 - **PostgREST 캐시**: 마이그레이션 후 `NOTIFY pgrst, 'reload schema'` + `docker restart supabase-rest` 안 하면 새 컬럼 안 보임.
 - **quota 에러 캐시 금지**: Gemini quota 에러는 transient. error 캐시에 굳이지 말 것 — handler.ts의 try/catch가 자동 처리.
+- **E2E는 라이브 prod DB에 돌아감** — 절대 기존 user 데이터에 fill/save 하지 말 것. service role REST로 throwaway row 생성 → 테스트 → `afterEach`/`finally`에서 force DELETE. 패턴: `delete-restaurant.spec.ts`, `memo-edit.spec.ts`, `collections.spec.ts`. UI 삭제 검증은 하되 cleanup은 절대 거기에만 의존하지 말 것 (실패 시 잔여 누적 → 사용자 메모 덮어씌움 / 컬렉션 31개 누적 등 실사고 발생함, commit `f7d8e0a`/`2cd590b`).
 
 ---
 
