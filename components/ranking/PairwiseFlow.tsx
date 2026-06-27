@@ -26,6 +26,7 @@ interface SubjectLite {
   name: string;
   category: string | null;
   storage_path: string | null;
+  blur_data_url?: string | null;
 }
 
 interface Opp {
@@ -33,6 +34,7 @@ interface Opp {
   name: string;
   category: string | null;
   storage_path: string | null;
+  blur_data_url?: string | null;
 }
 
 interface Props {

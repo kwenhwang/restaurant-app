@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Sym from "@/components/ui/Sym";
-import QuickWishSheet from "./QuickWishSheet";
+
+// Sheet code (Kakao search + Korean category map) only needs to load once the
+// user actually taps the wish button — saves ~5KB on the home page first paint.
+const QuickWishSheet = dynamic(() => import("./QuickWishSheet"), { ssr: false });
 
 export default function QuickWishButton() {
   const [open, setOpen] = useState(false);

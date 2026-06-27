@@ -15,7 +15,7 @@ import { relativeTime } from "@/lib/relative-time";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
-type Img = { id: string; storage_path: string; is_primary?: boolean };
+type Img = { id: string; storage_path: string; is_primary?: boolean; blur_data_url?: string | null };
 type Restaurant = {
   id: string;
   name: string;
@@ -64,6 +64,9 @@ export default function RestaurantCard({ restaurant }: { restaurant: Restaurant 
             fill
             sizes="(max-width: 768px) 100vw, 640px"
             className="object-cover"
+            {...(primary.blur_data_url
+              ? { placeholder: "blur" as const, blurDataURL: primary.blur_data_url }
+              : {})}
           />
         ) : (
           <CategoryPlaceholder category={restaurant.category} size="hero" />

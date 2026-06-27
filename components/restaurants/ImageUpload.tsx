@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useRef, useTransition } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { RestaurantImage } from "@/lib/types";
-import Lightbox from "./Lightbox";
-import MenuExtractor from "./MenuExtractor";
 import type { MenuData } from "@/app/(main)/restaurants/[id]/menu-action";
+
+// Lightbox + MenuExtractor are both heavy and only render after the user
+// interacts (taps a photo / pulls the menu sheet). Defer their JS until then.
+const Lightbox = dynamic(() => import("./Lightbox"), { ssr: false });
+const MenuExtractor = dynamic(() => import("./MenuExtractor"), { ssr: false });
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
@@ -275,6 +279,9 @@ export default function ImageUpload({
                   fill
                   sizes="(max-width: 768px) 33vw, 200px"
                   className="object-cover"
+                  {...(img.blur_data_url
+                    ? { placeholder: "blur" as const, blurDataURL: img.blur_data_url }
+                    : {})}
                 />
               </button>
               {img.is_primary && (

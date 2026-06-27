@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 
 interface Props {
-  images: { id: string; storage_path: string }[];
+  images: { id: string; storage_path: string; blur_data_url?: string | null }[];
   startIndex: number;
   onClose: () => void;
 }
@@ -91,6 +91,9 @@ export default function Lightbox({ images, startIndex, onClose }: Props) {
             sizes="100vw"
             className="object-contain"
             priority
+            {...(current.blur_data_url
+              ? { placeholder: "blur" as const, blurDataURL: current.blur_data_url }
+              : {})}
           />
         </div>
       </div>

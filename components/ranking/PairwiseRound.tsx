@@ -1,12 +1,14 @@
 "use client";
 
 import OpponentCard from "./OpponentCard";
+import { haptic } from "@/lib/haptic";
 
 interface Opp {
   id: string;
   name: string;
   category: string | null;
   storage_path: string | null;
+  blur_data_url?: string | null;
 }
 
 interface Props {
@@ -30,12 +32,20 @@ export default function PairwiseRound({ subject, opponent, onPick, onSkip, pendi
       <div className="grid grid-cols-2 gap-3 items-stretch">
         <OpponentCard
           {...subject}
-          onClick={() => !pending && onPick(subject.id)}
+          onClick={() => {
+            if (pending) return;
+            haptic("medium");
+            onPick(subject.id);
+          }}
           disabled={pending}
         />
         <OpponentCard
           {...opponent}
-          onClick={() => !pending && onPick(opponent.id)}
+          onClick={() => {
+            if (pending) return;
+            haptic("medium");
+            onPick(opponent.id);
+          }}
           disabled={pending}
         />
       </div>

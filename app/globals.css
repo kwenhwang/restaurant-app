@@ -224,10 +224,13 @@ html[data-theme="dark"] .glass { background: rgba(26,24,21,0.78) !important; col
 }
 @keyframes heart-burst { 0% { transform: scale(0.2); opacity: 0.9; } 100% { transform: scale(1.7); opacity: 0; } }
 @keyframes shimmer { 0% { background-position: -340px 0; } 100% { background-position: 340px 0; } }
-@keyframes fade-up { from { transform: translateY(10px); } to { transform: translateY(0); } }
+@keyframes fade-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
 
 .animate-pop { animation: heart-pop .42s ease-out; }
-.animate-fade-up { animation: fade-up .4s ease both; }
+.animate-fade-up { animation: fade-up .42s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* Consistent skeleton (E2) — visible at rest, never gates content */
 .skeleton {

@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Sym from "@/components/ui/Sym";
+import { haptic } from "@/lib/haptic";
 
 export type FeedbackSurface = "recommend" | "discover" | "review" | "menu" | "insights";
 
@@ -81,6 +82,7 @@ export default function FeedbackThumbs({
     e.stopPropagation();
     const toggled = vote === newVote ? 0 : newVote;
     setVote(toggled);
+    haptic(toggled === 0 ? "light" : "light");
     persistLocal(surface, target, toggled);
     send(toggled);
     if (toggled === 0) {

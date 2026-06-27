@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { haptic } from "@/lib/haptic";
 
 interface Props {
   restaurantId: string;
@@ -33,6 +34,7 @@ export default function FavoriteButton({
     e.stopPropagation();
     const next = !favorite;
     setFavorite(next); // optimistic
+    haptic("light");
     if (next) {
       setBurst(true);
       setTimeout(() => setBurst(false), 540);

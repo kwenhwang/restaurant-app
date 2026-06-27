@@ -11,6 +11,7 @@ interface Opponent {
   name: string;
   category: string | null;
   storage_path: string | null;
+  blur_data_url: string | null;
   elo: number;
 }
 
@@ -108,7 +109,7 @@ export async function pickOpponents(
   let q = supabase
     .from("restaurants")
     .select(
-      "id, name, category, restaurant_images(storage_path, is_primary), restaurant_scores(elo, tier)",
+      "id, name, category, restaurant_images(storage_path, is_primary, blur_data_url), restaurant_scores(elo, tier)",
     )
     .eq("user_id", userId)
     .neq("id", restaurantId);
@@ -124,7 +125,7 @@ export async function pickOpponents(
     id: string;
     name: string;
     category: string | null;
-    restaurant_images: { storage_path: string; is_primary: boolean | null }[] | null;
+    restaurant_images: { storage_path: string; is_primary: boolean | null; blur_data_url: string | null }[] | null;
     restaurant_scores:
       | { elo: number; tier: number | null }[]
       | { elo: number; tier: number | null }
@@ -139,15 +140,16 @@ export async function pickOpponents(
     // When tier filter applied, supabase may include rows whose join row is null;
     // we keep only those with a matching score row (already enforced above).
     const primary =
-      row.restaurant_images?.find((i) => i.is_primary)?.storage_path ??
-      row.restaurant_images?.[0]?.storage_path ??
+      row.restaurant_images?.find((i) => i.is_primary) ??
+      row.restaurant_images?.[0] ??
       null;
     return [
       {
         id: row.id,
         name: row.name,
         category: row.category,
-        storage_path: primary,
+        storage_path: primary?.storage_path ?? null,
+        blur_data_url: primary?.blur_data_url ?? null,
         elo: score.elo,
       } as Opponent,
     ];

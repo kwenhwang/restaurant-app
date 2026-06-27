@@ -74,7 +74,7 @@ export default async function PublicCollectionPage({ params }: Props) {
   const { data: items } = await admin
     .from("collection_items")
     .select(
-      "restaurant_id, order_index, restaurants!inner(id, name, category, address, rating, restaurant_images(storage_path, is_primary))",
+      "restaurant_id, order_index, restaurants!inner(id, name, category, address, rating, restaurant_images(storage_path, is_primary, blur_data_url))",
     )
     .eq("collection_id", collection.id)
     .order("order_index", { ascending: true });
@@ -87,7 +87,7 @@ export default async function PublicCollectionPage({ params }: Props) {
       category: string | null;
       address: string | null;
       rating: number | null;
-      restaurant_images: { storage_path: string; is_primary: boolean | null }[];
+      restaurant_images: { storage_path: string; is_primary: boolean | null; blur_data_url: string | null }[];
     };
   };
   const rows = (items ?? []) as unknown as Row[];
@@ -168,6 +168,9 @@ export default async function PublicCollectionPage({ params }: Props) {
                       fill
                       sizes="96px"
                       className="object-cover"
+                      {...(primary.blur_data_url
+                        ? { placeholder: "blur" as const, blurDataURL: primary.blur_data_url }
+                        : {})}
                     />
                   ) : (
                     <div

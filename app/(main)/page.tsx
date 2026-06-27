@@ -28,13 +28,43 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: restaurantsData } = await supabase
-    .from("restaurants")
-    .select(
-      "id, name, address, category, rating, is_favorite, note, created_at, images:restaurant_images(id, storage_path, is_primary)"
-    )
-    .eq("user_id", user!.id)
-    .order("created_at", { ascending: false });
+  // All 5 home-page queries below filter by user_id and have no inter-dependencies,
+  // so we fire them concurrently. Wishlist collection + items collapse to a single
+  // nested-select round-trip via PostgREST.
+  const [
+    { data: restaurantsData },
+    { data: visitsData },
+    { data: tagsData },
+    { data: wishItemsData },
+    { data: scoreRows },
+  ] = await Promise.all([
+    supabase
+      .from("restaurants")
+      .select(
+        "id, name, address, category, rating, is_favorite, note, created_at, images:restaurant_images(id, storage_path, is_primary, blur_data_url)",
+      )
+      .eq("user_id", user!.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("visits")
+      .select("restaurant_id, visited_at")
+      .eq("user_id", user!.id),
+    // restaurant_tags has no user_id column — RLS scopes the result to the
+    // caller's restaurants automatically (USING checks restaurants.user_id).
+    supabase
+      .from("restaurant_tags")
+      .select("restaurant_id, tag"),
+    supabase
+      .from("collections")
+      .select("collection_items(restaurant_id)")
+      .eq("owner_id", user!.id)
+      .eq("kind", "wishlist")
+      .maybeSingle(),
+    supabase
+      .from("restaurant_scores")
+      .select("restaurant_id, elo")
+      .eq("user_id", user!.id),
+  ]);
 
   const restaurants = restaurantsData ?? [];
 
@@ -60,11 +90,6 @@ export default async function HomePage() {
     );
   }
 
-  const { data: visitsData } = await supabase
-    .from("visits")
-    .select("restaurant_id, visited_at")
-    .eq("user_id", user!.id);
-
   const visitMap = new Map<string, { count: number; last: string }>();
   for (const v of visitsData ?? []) {
     const cur = visitMap.get(v.restaurant_id) ?? { count: 0, last: "" };
@@ -73,11 +98,6 @@ export default async function HomePage() {
     visitMap.set(v.restaurant_id, cur);
   }
 
-  const { data: tagsData } = await supabase
-    .from("restaurant_tags")
-    .select("restaurant_id, tag")
-    .in("restaurant_id", restaurants.map((r) => r.id));
-
   const tagMap = new Map<string, string[]>();
   for (const t of tagsData ?? []) {
     const listT = tagMap.get(t.restaurant_id) ?? [];
@@ -85,21 +105,10 @@ export default async function HomePage() {
     tagMap.set(t.restaurant_id, listT);
   }
 
-  // Wishlist membership lookup — for revisit nudge "still want to try" tier.
-  const { data: wishCol } = await supabase
-    .from("collections")
-    .select("id")
-    .eq("owner_id", user!.id)
-    .eq("kind", "wishlist")
-    .maybeSingle();
   const wishlistIds = new Set<string>();
-  if (wishCol?.id) {
-    const { data: items } = await supabase
-      .from("collection_items")
-      .select("restaurant_id")
-      .eq("collection_id", wishCol.id);
-    for (const it of items ?? []) wishlistIds.add(it.restaurant_id as string);
-  }
+  const wishItems =
+    (wishItemsData as { collection_items?: { restaurant_id: string }[] } | null)?.collection_items ?? [];
+  for (const it of wishItems) wishlistIds.add(it.restaurant_id);
 
   const decorated = restaurants.map((r) => ({
     ...r,
@@ -109,10 +118,6 @@ export default async function HomePage() {
     is_wishlist: wishlistIds.has(r.id),
   }));
 
-  const { data: scoreRows } = await supabase
-    .from("restaurant_scores")
-    .select("restaurant_id, elo")
-    .eq("user_id", user!.id);
   const eloMap = new Map<string, number>();
   for (const s of scoreRows ?? []) eloMap.set(s.restaurant_id, s.elo);
 

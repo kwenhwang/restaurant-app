@@ -43,7 +43,7 @@ export default async function SharedRestaurantPage({
   const { data: restaurant } = await sb
     .from("restaurants")
     .select(
-      "id, name, address, lat, lng, category, rating, note, menu, images:restaurant_images(id, storage_path, is_primary)"
+      "id, name, address, lat, lng, category, rating, note, menu, images:restaurant_images(id, storage_path, is_primary, blur_data_url)"
     )
     .eq("share_token", token)
     .single();
@@ -69,6 +69,9 @@ export default async function SharedRestaurantPage({
             sizes="(max-width: 768px) 100vw, 640px"
             priority
             className="object-cover"
+            {...(primary.blur_data_url
+              ? { placeholder: "blur" as const, blurDataURL: primary.blur_data_url }
+              : {})}
           />
         ) : (
           <CategoryPlaceholder category={restaurant.category} size="hero" />
@@ -159,9 +162,18 @@ export default async function SharedRestaurantPage({
         {/* Extra photos */}
         {restaurant.images && restaurant.images.length > 1 && (
           <div className="mt-4 grid grid-cols-3 gap-1.5">
-            {restaurant.images.slice(1, 7).map((img: { id: string; storage_path: string }) => (
+            {restaurant.images.slice(1, 7).map((img: { id: string; storage_path: string; blur_data_url?: string | null }) => (
               <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden" style={{ background: "var(--bg-2)" }}>
-                <Image src={`${IMAGE_BASE}/${img.storage_path}`} alt="" fill sizes="(max-width:768px) 33vw, 200px" className="object-cover" />
+                <Image
+                  src={`${IMAGE_BASE}/${img.storage_path}`}
+                  alt=""
+                  fill
+                  sizes="(max-width:768px) 33vw, 200px"
+                  className="object-cover"
+                  {...(img.blur_data_url
+                    ? { placeholder: "blur" as const, blurDataURL: img.blur_data_url }
+                    : {})}
+                />
               </div>
             ))}
           </div>

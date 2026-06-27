@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { uploadImage, deleteImage } from "@/lib/storage";
+import { generateBlurDataURL } from "@/lib/image-placeholder";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXT = new Set(["jpg", "jpeg", "png", "gif", "webp", "heic", "heif"]);
@@ -115,6 +116,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not a valid image" }, { status: 415 });
   }
 
+  // Start generating the blur placeholder while we upload to MinIO.
+  // Failing to generate one is non-fatal — consumers fall back to a category gradient.
+  const blurPromise = generateBlurDataURL(buffer);
+
   try {
     await uploadImage(path, buffer, file.type || "image/jpeg");
   } catch (e) {
@@ -122,9 +127,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 
+  const blurDataUrl = await blurPromise;
+
   const { data, error } = await supabase
     .from("restaurant_images")
-    .insert({ restaurant_id: restaurantId, storage_path: path, is_primary: isPrimary })
+    .insert({
+      restaurant_id: restaurantId,
+      storage_path: path,
+      is_primary: isPrimary,
+      blur_data_url: blurDataUrl,
+    })
     .select()
     .single();
 

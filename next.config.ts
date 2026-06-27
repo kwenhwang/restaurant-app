@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import bundleAnalyzer from "@next/bundle-analyzer";
 
 const securityHeaders = [
   {
@@ -43,6 +44,9 @@ const nextConfig: NextConfig = {
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+    // Mobile-first PWA: trim default desktop-heavy sizes, add mobile breakpoints.
+    deviceSizes: [360, 414, 640, 828, 1080, 1280],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   compress: true,
   poweredByHeader: false,
@@ -58,7 +62,9 @@ const nextConfig: NextConfig = {
 
 const sentryDsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
 
-export default withSentryConfig(nextConfig, {
+const withBundleAnalyzer = bundleAnalyzer({ enabled: process.env.ANALYZE === "1" });
+
+export default withSentryConfig(withBundleAnalyzer(nextConfig), {
   // Only run Sentry build steps when a DSN is configured.
   silent: !sentryDsn,
   widenClientFileUpload: true,

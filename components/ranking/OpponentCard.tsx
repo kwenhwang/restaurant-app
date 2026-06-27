@@ -10,11 +10,12 @@ interface Props {
   name: string;
   category: string | null;
   storage_path: string | null;
+  blur_data_url?: string | null;
   onClick: () => void;
   disabled?: boolean;
 }
 
-export default function OpponentCard({ name, category, storage_path, onClick, disabled }: Props) {
+export default function OpponentCard({ name, category, storage_path, blur_data_url, onClick, disabled }: Props) {
   const s = categoryStyle(category);
   return (
     <button
@@ -31,6 +32,9 @@ export default function OpponentCard({ name, category, storage_path, onClick, di
           fill
           sizes="(max-width: 768px) 50vw, 300px"
           className="object-cover"
+          {...(blur_data_url
+            ? { placeholder: "blur" as const, blurDataURL: blur_data_url }
+            : {})}
         />
       ) : (
         <CategoryPlaceholder category={category} size="hero" />

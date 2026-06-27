@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { haptic } from "@/lib/haptic";
 
 function todayLocalISO() {
   const d = new Date();
@@ -43,10 +44,12 @@ export default function AddVisit({ restaurantId }: Props) {
     setLoading(false);
 
     if (error) {
+      haptic("error");
       alert("기록 실패: " + error.message);
       return;
     }
 
+    haptic("success");
     setMemo("");
     setDate(todayLocalISO());
     setOpen(false);

@@ -87,6 +87,9 @@ export default function RevisitNudge({ candidates }: Props) {
               fill
               sizes="84px"
               className="object-cover"
+              {...(active.blur_data_url
+                ? { placeholder: "blur" as const, blurDataURL: active.blur_data_url }
+                : {})}
             />
           ) : (
             <div

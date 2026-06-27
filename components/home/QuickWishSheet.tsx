@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sym from "@/components/ui/Sym";
 import { categoryStyle } from "@/lib/category-icons";
+import { haptic } from "@/lib/haptic";
 
 interface KakaoResult {
   name: string;
@@ -113,9 +114,11 @@ export default function QuickWishSheet({ open, onClose }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "저장 실패");
+      haptic("success");
       setDone({ name: r.name, collectionId: json.collectionId ?? null });
       router.refresh();
     } catch (e) {
+      haptic("error");
       setError(e instanceof Error ? e.message : "오류");
     } finally {
       setSaving(false);
@@ -135,9 +138,11 @@ export default function QuickWishSheet({ open, onClose }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "저장 실패");
+      haptic("success");
       setDone({ name: q, collectionId: json.collectionId ?? null });
       router.refresh();
     } catch (e) {
+      haptic("error");
       setError(e instanceof Error ? e.message : "오류");
     } finally {
       setSaving(false);

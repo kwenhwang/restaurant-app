@@ -59,6 +59,8 @@ export interface RestaurantImage {
   restaurant_id: string;
   storage_path: string;
   is_primary: boolean;
+  /** Tiny base64 JPEG (~150 bytes) for <Image placeholder="blur">. Null on legacy rows. */
+  blur_data_url?: string | null;
 }
 
 export interface Visit {

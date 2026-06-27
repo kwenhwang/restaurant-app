@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -8,7 +9,9 @@ import { createClient } from "@/lib/supabase/client";
 import { categoryStyle } from "@/lib/category-icons";
 import { getLocationConsent } from "@/lib/location-consent";
 import LocationConsent from "@/components/ui/LocationConsent";
-import VoiceInput from "./VoiceInput";
+
+// Speech recognition + 한글 IME glue isn't needed unless the user taps the mic.
+const VoiceInput = dynamic(() => import("./VoiceInput"), { ssr: false });
 
 interface NearbyKakao {
   kakaoId: string;

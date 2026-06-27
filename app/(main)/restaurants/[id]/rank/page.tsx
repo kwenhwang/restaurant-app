@@ -23,7 +23,7 @@ export default async function RankPage({ params, searchParams }: Props) {
 
   const { data: restaurant } = await supabase
     .from("restaurants")
-    .select("id, name, category, restaurant_images(storage_path, is_primary)")
+    .select("id, name, category, restaurant_images(storage_path, is_primary, blur_data_url)")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -38,7 +38,7 @@ export default async function RankPage({ params, searchParams }: Props) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  type Img = { storage_path: string; is_primary: boolean | null };
+  type Img = { storage_path: string; is_primary: boolean | null; blur_data_url: string | null };
   const imgs = (restaurant as { restaurant_images?: Img[] }).restaurant_images ?? [];
   const primary = imgs.find((i) => i.is_primary) ?? imgs[0];
 
@@ -49,6 +49,7 @@ export default async function RankPage({ params, searchParams }: Props) {
         name: restaurant.name,
         category: restaurant.category ?? null,
         storage_path: primary?.storage_path ?? null,
+        blur_data_url: primary?.blur_data_url ?? null,
       }}
       mode={mode}
       initialTier={(scoreRow?.tier ?? null) as Tier | null}

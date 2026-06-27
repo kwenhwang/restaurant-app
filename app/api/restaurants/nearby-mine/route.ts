@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   const { data } = await supabase
     .from("restaurants")
-    .select("id, name, address, lat, lng, category, rating, is_favorite, images:restaurant_images(id, storage_path, is_primary)")
+    .select("id, name, address, lat, lng, category, rating, is_favorite, images:restaurant_images(id, storage_path, is_primary, blur_data_url)")
     .eq("user_id", user.id)
     .not("lat", "is", null)
     .gte("lat", lat - latDelta)

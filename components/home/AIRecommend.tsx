@@ -27,6 +27,7 @@ interface Image {
   id: string;
   storage_path: string;
   is_primary?: boolean;
+  blur_data_url?: string | null;
 }
 interface RestaurantLite {
   id: string;
@@ -213,7 +214,17 @@ function HeroCard({ r, reason, q }: { r: RestaurantLite; reason: string; q: stri
       style={{ width: "calc(100% - 26px)", height: 232, borderRadius: "var(--r-card)", scrollSnapAlign: "start", boxShadow: "var(--shadow-photo)" }}
     >
       {primary ? (
-        <Image src={`${IMAGE_BASE}/${primary.storage_path}`} alt={r.name} fill sizes="100vw" className="object-cover" priority />
+        <Image
+          src={`${IMAGE_BASE}/${primary.storage_path}`}
+          alt={r.name}
+          fill
+          sizes="100vw"
+          className="object-cover"
+          priority
+          {...(primary.blur_data_url
+            ? { placeholder: "blur" as const, blurDataURL: primary.blur_data_url }
+            : {})}
+        />
       ) : (
         <CategoryPlaceholder category={r.category} size="hero" />
       )}

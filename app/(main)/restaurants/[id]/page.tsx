@@ -175,6 +175,9 @@ export default async function RestaurantDetailPage({
             sizes="(max-width: 768px) 100vw, 640px"
             priority
             className="object-cover"
+            {...(primary.blur_data_url
+              ? { placeholder: "blur" as const, blurDataURL: primary.blur_data_url }
+              : {})}
           />
         ) : (
           <CategoryPlaceholder category={restaurant.category} size="hero" />

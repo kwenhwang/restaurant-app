@@ -25,7 +25,7 @@ export interface RevisitInput {
   is_favorite?: boolean | null;
   is_wishlist?: boolean | null;
   last_visit?: string | null;
-  images?: { id: string; storage_path: string; is_primary?: boolean | null }[];
+  images?: { id: string; storage_path: string; is_primary?: boolean | null; blur_data_url?: string | null }[];
 }
 
 export interface RevisitCandidate {
@@ -38,6 +38,7 @@ export interface RevisitCandidate {
   /** Days since last visit, or 9999 for wishlist items that have never been visited. */
   days_since: number;
   storage_path: string | null;
+  blur_data_url: string | null;
   score: number;
 }
 
@@ -103,6 +104,7 @@ export function pickRevisitCandidates(
       is_wishlist: wishlist,
       days_since: daysSince,
       storage_path: primary?.storage_path ?? null,
+      blur_data_url: primary?.blur_data_url ?? null,
       score,
     });
   }

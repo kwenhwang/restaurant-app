@@ -8,6 +8,7 @@ import {
   updateVisitMemo,
   deleteVisit,
 } from "@/app/(main)/restaurants/[id]/visit-memo-action";
+import { haptic } from "@/lib/haptic";
 
 interface Props {
   visitId: string;
@@ -41,9 +42,11 @@ export default function VisitMemoCell({ visitId, restaurantId, initial }: Props)
     startTransition(async () => {
       const res = await updateVisitMemo(visitId, restaurantId, next);
       if ("error" in res) {
+        haptic("error");
         setError(res.error);
         return;
       }
+      haptic("light");
       setSaved(next);
       setEditing(false);
     });

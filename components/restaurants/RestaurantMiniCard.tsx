@@ -8,7 +8,7 @@ import CategoryPlaceholder from "@/components/restaurants/CategoryPlaceholder";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
-type Img = { id: string; storage_path: string; is_primary?: boolean };
+type Img = { id: string; storage_path: string; is_primary?: boolean; blur_data_url?: string | null };
 type Restaurant = {
   id: string;
   name: string;
@@ -41,6 +41,9 @@ export default function RestaurantMiniCard({
             fill
             sizes="150px"
             className="object-cover"
+            {...(primary.blur_data_url
+              ? { placeholder: "blur" as const, blurDataURL: primary.blur_data_url }
+              : {})}
           />
         ) : (
           <CategoryPlaceholder category={restaurant.category} size="thumb" />

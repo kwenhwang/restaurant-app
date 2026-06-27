@@ -242,8 +242,14 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
             </div>
           )}
           <div className="flex flex-col gap-3.5">
-            {(isFiltering ? filtered : recent).map((r) => (
-              <RestaurantCard key={r.id} restaurant={r} />
+            {(isFiltering ? filtered : recent).map((r, i) => (
+              <div
+                key={r.id}
+                className="animate-fade-up"
+                style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
+              >
+                <RestaurantCard restaurant={r} />
+              </div>
             ))}
           </div>
         </div>
