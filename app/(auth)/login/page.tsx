@@ -6,7 +6,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import Sym from "@/components/ui/Sym";
 
 const PLATES = [
@@ -23,6 +22,8 @@ export default function LoginPage() {
   async function signInWithGoogle() {
     setError("");
     setLoading(true);
+    // Lazy-load Supabase client — saves ~50 KB on the OAuth-only login page.
+    const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

@@ -60,6 +60,11 @@ export default function RootLayout({
       className={`h-full antialiased ${pretendard.variable} ${notoSerifKr.variable}`}
     >
       <head>
+        {/* Warm the TLS+TCP connection to hosts we'll definitely hit on most
+            routes (images via MinIO, Kakao Maps SDK). Saves ~150-300 ms on
+            cold mobile loads. */}
+        <link rel="preconnect" href="https://sword33.duckdns.org" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://dapi.kakao.com" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

@@ -12,44 +12,53 @@ export default function RegisterSW() {
     }
 
     let cancelled = false;
+    // Defer SW registration past first paint — it's not user-visible work,
+    // and synchronous register() costs a few hundred ms on cold loads.
+    const idle: (cb: () => void) => number =
+      (window as Window & {
+        requestIdleCallback?: (cb: () => void) => number;
+      }).requestIdleCallback ?? ((cb) => window.setTimeout(cb, 1));
 
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => {
-        if (cancelled) return;
+    idle(() => {
+      if (cancelled) return;
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          if (cancelled) return;
 
-        // If a new worker is already waiting (previous session installed it)
-        if (reg.waiting && navigator.serviceWorker.controller) {
-          setWaitingWorker(reg.waiting);
-          setUpdateReady(true);
-        }
+          // If a new worker is already waiting (previous session installed it)
+          if (reg.waiting && navigator.serviceWorker.controller) {
+            setWaitingWorker(reg.waiting);
+            setUpdateReady(true);
+          }
 
-        // Listen for newly installing workers
-        reg.addEventListener("updatefound", () => {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
-          newWorker.addEventListener("statechange", () => {
-            if (
-              newWorker.state === "installed" &&
-              navigator.serviceWorker.controller
-            ) {
-              setWaitingWorker(newWorker);
-              setUpdateReady(true);
-            }
+          // Listen for newly installing workers
+          reg.addEventListener("updatefound", () => {
+            const newWorker = reg.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener("statechange", () => {
+              if (
+                newWorker.state === "installed" &&
+                navigator.serviceWorker.controller
+              ) {
+                setWaitingWorker(newWorker);
+                setUpdateReady(true);
+              }
+            });
           });
-        });
 
-        // Periodically check for updates (every 30 minutes while tab is open)
-        setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
-      })
-      .catch(() => {});
+          // Periodically check for updates (every 30 minutes while tab is open)
+          setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+        })
+        .catch(() => {});
 
-    // Reload page when the new SW takes control
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
+      // Reload page when the new SW takes control
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
     });
 
     return () => {

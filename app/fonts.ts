@@ -24,11 +24,16 @@ export const pretendard = localFont({
   ],
 });
 
-/** Display — Noto Serif KR (self-hosted via next/font/google). */
+/** Display — Noto Serif KR (self-hosted via next/font/google).
+ *  preload: false → the font isn't `<link rel=preload>`-ed on every route.
+ *  Pages that don't actually use the serif (/login, /signup, /offline) skip the
+ *  download entirely. Routes that DO use it incur a brief swap on first paint,
+ *  which `display: "swap"` already smooths over. */
 export const notoSerifKr = Noto_Serif_KR({
   subsets: ["latin"],
   weight: ["500", "600", "700", "900"],
   display: "swap",
+  preload: false,
   variable: "--font-noto-serif-kr",
   fallback: ["Pretendard", "serif"],
 });
