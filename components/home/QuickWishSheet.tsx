@@ -163,7 +163,7 @@ export default function QuickWishSheet({ open, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-[19px] font-extrabold">가고 싶은 곳 찜</h3>
+          <h3 className="font-display text-[19px] font-extrabold">아직 안 간 곳 찜하기</h3>
           <button
             type="button"
             onClick={onClose}

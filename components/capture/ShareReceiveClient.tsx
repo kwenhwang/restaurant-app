@@ -227,7 +227,7 @@ export default function ShareReceiveClient({ initialText }: { initialText: strin
             className="w-full h-[54px] rounded-2xl text-white text-[17px] font-bold disabled:opacity-50"
             style={{ background: "var(--accent)", boxShadow: "0 8px 20px rgba(255,111,61,0.28)" }}
           >
-            {saving ? "저장 중…" : "맛집으로 추가 (가봤어요)"}
+            {saving ? "저장 중…" : "이미 가본 곳으로 추가"}
           </button>
           <button
             type="button"
@@ -236,7 +236,7 @@ export default function ShareReceiveClient({ initialText }: { initialText: strin
             className="w-full h-[48px] rounded-2xl text-[15px] font-bold disabled:opacity-50"
             style={{ background: "var(--accent-soft)", color: "var(--accent-press)" }}
           >
-            🔖 찜만 (다음에 갈게요)
+            🔖 아직 안 간 곳 찜하기
           </button>
         </div>
       )}

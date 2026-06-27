@@ -16,7 +16,7 @@ export default function QuickWishButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="가고 싶은 곳 찜하기"
+        aria-label="아직 안 간 곳 찜하기"
         className="w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-95"
         style={{
           background: "var(--surface)",
