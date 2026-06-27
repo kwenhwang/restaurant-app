@@ -56,12 +56,16 @@ const nextConfig: NextConfig = {
   },
 };
 
+const sentryDsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
+
 export default withSentryConfig(nextConfig, {
-  // Only run Sentry build steps when DSN is configured.
-  silent: !process.env.NEXT_PUBLIC_SENTRY_DSN,
-  // Source map upload requires an auth token; skip for now.
+  // Only run Sentry build steps when a DSN is configured.
+  silent: !sentryDsn,
   widenClientFileUpload: true,
   disableLogger: true,
+  // Source maps are uploaded only when SENTRY_AUTH_TOKEN is present in the
+  // build env (set it on the deploy box to get readable prod stack traces).
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
   // Tunnel requests through our own domain to avoid ad-blocker false positives.
   tunnelRoute: "/monitoring",
 });

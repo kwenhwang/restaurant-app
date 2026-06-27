@@ -1,6 +1,8 @@
 import * as Sentry from "@sentry/nextjs";
 
-const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+// Server runtime can use a non-public SENTRY_DSN; fall back to the public one
+// (the DSN is not secret, so sharing the client var is fine).
+const dsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
 
 if (dsn) {
   Sentry.init({
@@ -25,4 +27,9 @@ if (dsn) {
       return event;
     },
   });
+} else if (process.env.NODE_ENV === "production") {
+  // Make "Sentry silently off in prod" detectable in the server logs.
+  console.warn(
+    "[sentry] No SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN set — server error monitoring is DISABLED.",
+  );
 }

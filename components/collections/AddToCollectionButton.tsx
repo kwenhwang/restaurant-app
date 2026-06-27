@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import Sym from "@/components/ui/Sym";
 import { addToCollection } from "@/app/(main)/collections/actions";
 
@@ -93,13 +94,13 @@ export default function AddToCollectionButton({ restaurantId }: Props) {
                 <p className="text-[14px]" style={{ color: "var(--text-2)" }}>
                   아직 컬렉션이 없어요.
                 </p>
-                <a
+                <Link
                   href="/collections/new"
                   className="mt-3 inline-flex h-10 px-4 rounded-full text-[13px] font-bold text-white"
                   style={{ background: "var(--accent)" }}
                 >
                   새 컬렉션 만들기
-                </a>
+                </Link>
               </div>
             ) : (
               <div className="space-y-2">
@@ -139,13 +140,13 @@ export default function AddToCollectionButton({ restaurantId }: Props) {
                   );
                 })}
 
-                <a
+                <Link
                   href="/collections/new"
                   className="block text-center mt-3 h-11 leading-[44px] rounded-2xl text-[13px] font-bold"
                   style={{ background: "var(--surface)", color: "var(--text-2)" }}
                 >
                   + 새 컬렉션 만들기
-                </a>
+                </Link>
               </div>
             )}
           </div>

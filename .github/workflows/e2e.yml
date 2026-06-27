@@ -81,6 +81,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Typecheck (tsc --noEmit)
+        run: pnpm typecheck
+
+      - name: Lint (eslint)
+        run: pnpm lint
+
       - name: Unit tests (vitest)
         run: pnpm test
 

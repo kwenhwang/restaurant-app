@@ -32,7 +32,7 @@ export default function ShareReceiveClient({ initialText }: { initialText: strin
     try {
       // Extract URLs from text, fetch first one if it's a place URL we can scrape
       const urlMatch = t.match(/https?:\/\/[^\s]+/);
-      let extracted: { name?: string; address?: string } = {};
+      const extracted: { name?: string; address?: string } = {};
       if (urlMatch) {
         try {
           // Try a HEAD fetch to follow short URLs (kakao map share URLs)
