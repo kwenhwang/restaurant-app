@@ -181,7 +181,7 @@ export default function KakaoMap({ restaurants }: Props) {
       })
       .filter((x): x is { r: MarkerData; bearing: number; meters: number } => x !== null)
       .sort((a, b) => a.meters - b.meters)
-      .slice(0, 8); // cap so the rim doesn't get cluttered
+      .slice(0, 5); // cap so the rim doesn't get cluttered
   }, [filtered, bounds]);
 
   // 1) Load SDK + create map (once)
@@ -514,41 +514,48 @@ export default function KakaoMap({ restaurants }: Props) {
       </div>
 
       {/* Off-screen indicators — chip on the rim showing direction + distance.
-          Game-style minimap pattern: bearing 0° = top, 90° = right, etc.
-          Each chip is positioned by translating along (sin·θ, -cos·θ) from
-          viewport center, then clamped to the rim with a ~36px inset. */}
+          Game-style minimap pattern. Chips are clamped inside a "safe rect"
+          that avoids the top search/filter stack and the right-side FAB
+          column, so they never overlap other UI. */}
       {!selected && offscreen.map(({ r, bearing, meters }) => {
         const rad = (bearing * Math.PI) / 180;
         const sx = Math.sin(rad);
         const sy = -Math.cos(rad);
-        // Clamp to a rounded-rect rim: pick the larger axis so the chip sits
-        // on whichever edge the bearing points to.
-        const a = Math.max(Math.abs(sx), Math.abs(sy));
-        const ux = sx / a;
-        const uy = sy / a;
-        // Viewport halves minus inset; lays the chip just inside the edge.
-        const insetTop = 130; // clear search + chips overlay
-        const insetBottom = 24;
-        const insetSide = 12;
-        const left = `calc(50% + ${ux * 50}vw - 36px - ${ux * insetSide}px)`;
-        const top = `calc(${insetTop}px + (100vh - ${insetTop + insetBottom + 96}px) * ${(uy + 1) / 2})`;
+        const a = Math.max(Math.abs(sx), Math.abs(sy)) || 1;
+        const ux = sx / a; // -1..+1
+        const uy = sy / a; // -1..+1 (negative=up)
+        // Safe rect inside the map div (which is sized to viewport minus TabBar).
+        // top: search(44) + chips(32) + chips(32) + paddings(~16) → 124 + small buffer
+        // right: FAB column width(48) + margin(12+24)  → ~80
+        // iOS safe-area-inset-top: search(44) + chips(32) + chips(32) + gaps(~24) → ~132
+        // Add 44 px for status bar / notch.
+        const safeTop = 178;
+        const safeBottom = 32;
+        const safeSide = 18;
+        const safeRight = 80;
+        const chipW = 116;
+        const chipH = 26;
+        const tProgress = (uy + 1) / 2; // 0=top, 1=bottom
+        const xProgress = (ux + 1) / 2; // 0=left, 1=right
+        const top = `calc(${safeTop}px + (100% - ${safeTop + safeBottom + chipH}px) * ${tProgress})`;
+        const left = `calc(${safeSide}px + (100% - ${safeSide + safeRight + chipW}px) * ${xProgress})`;
         const kmLabel = meters >= 1000 ? `${(meters / 1000).toFixed(1)}km` : `${Math.round(meters)}m`;
         const emoji = categoryStyle(r.category).emoji;
         const color = r.is_favorite ? "#E5484D" : (r.rating ?? 0) >= 5 ? "#D4AF37" : "var(--accent)";
-        // Arrow rotation: 0deg points up, bearing 0 = north (up in our screen)
         return (
           <button
             key={r.id}
             type="button"
             onClick={() => panToMarker(r)}
             aria-label={`${r.name}으로 이동 — ${kmLabel}`}
-            className="absolute z-10 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold text-white whitespace-nowrap transition-transform active:scale-90 animate-fade-up"
+            className="absolute z-10 inline-flex items-center gap-1 px-2 rounded-full text-[11px] font-bold text-white whitespace-nowrap transition-transform active:scale-90 animate-fade-up"
             style={{
               left,
               top,
+              height: chipH,
+              maxWidth: chipW,
               background: color,
               boxShadow: "0 4px 14px rgba(0,0,0,0.22)",
-              maxWidth: 132,
             }}
           >
             <span
@@ -588,9 +595,9 @@ export default function KakaoMap({ restaurants }: Props) {
       {/* Empty filter state */}
       {ready && filtered.length === 0 && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-[12.5px] font-semibold"
+          className="absolute left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-[12.5px] font-semibold z-10"
           style={{
-            top: 130,
+            top: 178,
             background: "rgba(20,16,12,0.78)",
             color: "white",
             backdropFilter: "blur(8px)",
