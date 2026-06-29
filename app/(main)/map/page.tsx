@@ -13,18 +13,18 @@ export default async function MapPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 5 queries in parallel — restaurants는 lat/lng 있는 것만, 나머지는 user 단위
+  // 3 queries in parallel — restaurants는 lat/lng 있는 것만, 나머지는 user 단위
   const [restaurantsRes, visitsRes, wishlistRes] = await Promise.all([
     supabase
       .from("restaurants")
       .select(
-        "id, name, address, lat, lng, category, rating, is_favorite, images:restaurant_images(storage_path, is_primary, blur_data_url)",
+        "id, name, address, lat, lng, category, rating, is_favorite, phone, business_hours, note, menu, images:restaurant_images(storage_path, is_primary, blur_data_url)",
       )
       .eq("user_id", user!.id)
       .not("lat", "is", null),
     supabase
       .from("visits")
-      .select("restaurant_id")
+      .select("restaurant_id, visited_at")
       .eq("user_id", user!.id),
     supabase
       .from("collections")
@@ -36,10 +36,13 @@ export default async function MapPage() {
 
   const restaurants = restaurantsRes.data ?? [];
 
-  // Aggregate visit counts
-  const visitCount = new Map<string, number>();
+  // Aggregate visit count + last visit per restaurant
+  const visitAgg = new Map<string, { count: number; last: string | null }>();
   for (const v of visitsRes.data ?? []) {
-    visitCount.set(v.restaurant_id, (visitCount.get(v.restaurant_id) ?? 0) + 1);
+    const cur = visitAgg.get(v.restaurant_id) ?? { count: 0, last: null as string | null };
+    cur.count += 1;
+    if (v.visited_at && (!cur.last || v.visited_at > cur.last)) cur.last = v.visited_at;
+    visitAgg.set(v.restaurant_id, cur);
   }
 
   // Wishlist membership
@@ -50,11 +53,15 @@ export default async function MapPage() {
   for (const it of wishItems) wishIds.add(it.restaurant_id);
 
   type ImageRow = { storage_path: string; is_primary: boolean | null; blur_data_url: string | null };
+  type BusinessHours = Record<string, string> | null;
+  type Menu = { items?: { name: string; price: string | null }[]; price_range?: string | null } | null;
   const markers: MarkerData[] = restaurants
     .filter((r) => r.lat != null && r.lng != null)
     .map((r) => {
       const imgs = (r as { images?: ImageRow[] }).images ?? [];
       const primary = imgs.find((i) => i.is_primary) ?? imgs[0];
+      const agg = visitAgg.get(r.id);
+      const menu = r.menu as Menu;
       return {
         id: r.id,
         name: r.name,
@@ -65,9 +72,15 @@ export default async function MapPage() {
         rating: r.rating,
         is_favorite: !!r.is_favorite,
         is_wishlist: wishIds.has(r.id),
-        visit_count: visitCount.get(r.id) ?? 0,
+        visit_count: agg?.count ?? 0,
+        last_visit: agg?.last ?? null,
         storage_path: primary?.storage_path ?? null,
         blur_data_url: primary?.blur_data_url ?? null,
+        phone: r.phone ?? null,
+        business_hours: (r.business_hours as BusinessHours) ?? null,
+        note: r.note ?? null,
+        price_range: menu?.price_range ?? null,
+        menu_items: (menu?.items ?? []).slice(0, 3),
       };
     });
 

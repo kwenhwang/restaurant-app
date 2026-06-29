@@ -29,8 +29,47 @@ export interface MarkerData {
   is_favorite: boolean;
   is_wishlist: boolean;
   visit_count: number;
+  last_visit: string | null;
   storage_path: string | null;
   blur_data_url: string | null;
+  phone: string | null;
+  business_hours: Record<string, string> | null;
+  note: string | null;
+  price_range: string | null;
+  menu_items: { name: string; price: string | null }[];
+}
+
+const WEEKDAY: ("sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat")[] = [
+  "sun", "mon", "tue", "wed", "thu", "fri", "sat",
+];
+const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** Today's hours string, or null if not set. */
+function todayHours(b: Record<string, string> | null): { label: string; open: boolean | null } | null {
+  if (!b) return null;
+  const now = new Date();
+  const key = WEEKDAY[now.getDay()];
+  const raw = b[key];
+  if (!raw) return null;
+  if (raw === "휴무") return { label: "오늘 휴무", open: false };
+  const m = raw.match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
+  if (!m) return { label: raw, open: null };
+  const open = Number(m[1]) * 60 + Number(m[2]);
+  const close = Number(m[3]) * 60 + Number(m[4]);
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const isOpen = close > open ? cur >= open && cur <= close : cur >= open || cur <= close;
+  return { label: raw, open: isOpen };
+}
+
+function lastVisitLabel(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso + (iso.length === 10 ? "T00:00:00" : ""));
+  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
+  if (days < 1) return "오늘 방문";
+  if (days < 7) return `${days}일 전 방문`;
+  if (days < 30) return `${Math.floor(days / 7)}주 전 방문`;
+  if (days < 365) return `${Math.floor(days / 30)}개월 전 방문`;
+  return `${Math.floor(days / 365)}년 전 방문`;
 }
 
 interface Props {
@@ -196,10 +235,39 @@ export default function KakaoMap({ restaurants }: Props) {
     }
   }, [filtered, ready]);
 
-  // 3) "내 위치" button — center map + drop temp marker
-  function goToMyLocation() {
-    if (!navigator.geolocation || !mapInstance.current) return;
+  // 3) "내 위치" button — sniff permission first so we can give a clear hint
+  //    when the browser has cached a 'denied' state and won't show a prompt.
+  async function goToMyLocation() {
+    if (!mapInstance.current) return;
+    if (!navigator.geolocation) {
+      setError("이 브라우저는 위치 기능을 지원하지 않아요");
+      setTimeout(() => setError(null), 3500);
+      return;
+    }
     haptic("light");
+
+    // Pre-check: if denied, the browser will fire the error callback without
+    // re-prompting. Surface a real fix path instead of a generic toast.
+    try {
+      type PermStatus = { state: "granted" | "denied" | "prompt" };
+      const perms = (navigator as Navigator & {
+        permissions?: { query: (q: { name: string }) => Promise<PermStatus> };
+      }).permissions;
+      if (perms) {
+        const status = await perms.query({ name: "geolocation" });
+        if (status.state === "denied") {
+          haptic("error");
+          setError(
+            "위치 권한이 차단됐어요. 주소창 자물쇠 → 권한 → 위치 → 허용 후 새로고침해 주세요.",
+          );
+          setTimeout(() => setError(null), 6000);
+          return;
+        }
+      }
+    } catch {
+      // Permissions API unavailable (Safari iOS in some contexts) — fall through.
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const latLng = new window.kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
@@ -219,12 +287,20 @@ export default function KakaoMap({ restaurants }: Props) {
         me.setMap(mapInstance.current!);
         meMarkerRef.current = me;
       },
-      () => {
+      (err) => {
         haptic("error");
-        setError("위치 권한이 꺼져 있어요");
-        setTimeout(() => setError(null), 2500);
+        if (err.code === err.PERMISSION_DENIED) {
+          setError(
+            "위치 권한이 차단됐어요. 주소창 자물쇠 → 권한에서 허용으로 바꿔 주세요.",
+          );
+        } else if (err.code === err.TIMEOUT) {
+          setError("위치 찾는 데 시간이 너무 걸려요");
+        } else {
+          setError("현재 위치를 알 수 없어요");
+        }
+        setTimeout(() => setError(null), 5000);
       },
-      { enableHighAccuracy: true, timeout: 6000 },
+      { enableHighAccuracy: true, timeout: 12_000, maximumAge: 60_000 },
     );
   }
 
@@ -371,83 +447,144 @@ export default function KakaoMap({ restaurants }: Props) {
         </div>
       )}
 
-      {/* Selected card */}
+      {/* Selected sheet */}
       {selected && (
         <div
-          className="absolute left-3 right-3 z-10 overflow-hidden rounded-2xl"
+          className="absolute left-2 right-2 z-10 overflow-hidden rounded-3xl animate-fade-up"
           style={{
-            bottom: 16,
+            bottom: 12,
             background: "var(--surface)",
-            boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
+            boxShadow: "0 16px 40px rgba(0,0,0,0.22)",
+            maxHeight: "62%",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          <div className="flex">
-            <div className="relative shrink-0" style={{ width: 96, height: 96 }}>
-              {selected.storage_path ? (
-                <Image
-                  src={`${IMAGE_BASE}/${selected.storage_path}`}
-                  alt={selected.name}
-                  fill
-                  sizes="96px"
-                  className="object-cover"
-                  {...(selected.blur_data_url
-                    ? { placeholder: "blur" as const, blurDataURL: selected.blur_data_url }
-                    : {})}
-                />
-              ) : (
-                <div
-                  className="w-full h-full flex items-center justify-center text-[34px]"
-                  style={{ background: categoryStyle(selected.category).gradient }}
-                >
-                  {categoryStyle(selected.category).emoji}
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0 p-3 pr-2">
-              <div className="flex items-start justify-between gap-2">
-                <Link
-                  href={`/restaurants/${selected.id}`}
-                  className="font-display text-[16.5px] font-extrabold truncate block"
-                  style={{ letterSpacing: "-0.2px" }}
-                >
-                  {selected.name}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setSelected(null)}
-                  aria-label="닫기"
-                  className="w-7 h-7 -mt-0.5 -mr-0.5 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: "var(--bg)" }}
-                >
-                  <Sym name="xmark" size={11} />
-                </button>
+          {/* Hero photo */}
+          <div className="relative w-full shrink-0" style={{ height: 140 }}>
+            {selected.storage_path ? (
+              <Image
+                src={`${IMAGE_BASE}/${selected.storage_path}`}
+                alt={selected.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 640px"
+                className="object-cover"
+                {...(selected.blur_data_url
+                  ? { placeholder: "blur" as const, blurDataURL: selected.blur_data_url }
+                  : {})}
+              />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center text-[64px]"
+                style={{ background: categoryStyle(selected.category).gradient }}
+              >
+                {categoryStyle(selected.category).emoji}
               </div>
-              <div className="flex items-center gap-1.5 mt-1 text-[12px]" style={{ color: "var(--text-2)" }}>
+            )}
+            <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,0.55) 100%)" }} />
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              aria-label="닫기"
+              className="absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center text-white"
+              style={{ background: "rgba(20,16,12,0.46)", backdropFilter: "blur(8px)" }}
+            >
+              <Sym name="xmark" size={14} />
+            </button>
+            <div className="absolute left-3 right-12 bottom-2 text-white">
+              <Link
+                href={`/restaurants/${selected.id}`}
+                className="font-display text-[20px] font-black truncate block"
+                style={{ letterSpacing: "-0.3px", textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
+              >
+                {selected.name}
+              </Link>
+              <div className="flex items-center gap-1.5 mt-0.5 text-[12px] font-semibold">
                 {selected.category && (
-                  <span className="font-bold" style={{ color: "var(--text)" }}>
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.22)", backdropFilter: "blur(6px)" }}>
                     {categoryStyle(selected.category).emoji} {selected.category}
                   </span>
                 )}
-                {selected.rating && <span>· ⭐ {selected.rating}</span>}
-                {selected.visit_count > 0 && <span>· 🍴 {selected.visit_count}회</span>}
-                {selected.is_favorite && <span style={{ color: "#E5484D" }}>· ♥</span>}
-                {selected.is_wishlist && <span style={{ color: "#C9A07A" }}>· 🔖</span>}
+                {selected.rating != null && selected.rating > 0 && (
+                  <span style={{ color: "#FFD56B" }}>⭐ {selected.rating}</span>
+                )}
+                {selected.is_favorite && <span style={{ color: "#FFA0A0" }}>♥</span>}
+                {selected.is_wishlist && <span style={{ color: "#E5C9A2" }}>🔖</span>}
               </div>
-              {selected.address && (
-                <p className="text-[11.5px] mt-1 truncate" style={{ color: "var(--text-3)" }}>
-                  {selected.address}
-                </p>
-              )}
             </div>
           </div>
 
+          {/* Scrollable body */}
+          <div className="overflow-y-auto px-4 py-3 space-y-2.5 text-[13px]" style={{ color: "var(--text)" }}>
+            {/* Visit + hours row */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1" style={{ color: "var(--text-2)" }}>
+              {selected.visit_count > 0 && (
+                <span className="inline-flex items-center gap-1 font-semibold">
+                  🍴 {selected.visit_count}회 방문
+                </span>
+              )}
+              {lastVisitLabel(selected.last_visit) && (
+                <span>· {lastVisitLabel(selected.last_visit)}</span>
+              )}
+              {(() => {
+                const th = todayHours(selected.business_hours);
+                if (!th) return null;
+                const color = th.open === false ? "var(--text-3)" : th.open ? "#22A06B" : "var(--text-2)";
+                const label = th.open === true ? `영업 중 · ${th.label}` : th.open === false ? th.label : `오늘 ${th.label}`;
+                return <span style={{ color }}>· 🕘 {label}</span>;
+              })()}
+            </div>
+
+            {selected.address && (
+              <div className="flex items-start gap-2 text-[12.5px]" style={{ color: "var(--text-2)" }}>
+                <Sym name="mappin" size={13} strokeWidth={2} />
+                <span className="flex-1">{selected.address}</span>
+              </div>
+            )}
+
+            {selected.phone && (
+              <a
+                href={`tel:${selected.phone.replace(/[^0-9+]/g, "")}`}
+                className="flex items-center gap-2 text-[12.5px] font-semibold"
+                style={{ color: "var(--accent-press)" }}
+              >
+                <Sym name="phone.fill" size={13} /> {selected.phone}
+              </a>
+            )}
+
+            {(selected.price_range || selected.menu_items.length > 0) && (
+              <div className="rounded-xl p-2.5 mt-1" style={{ background: "var(--bg)" }}>
+                {selected.price_range && (
+                  <div className="text-[11px] font-bold mb-1" style={{ color: "var(--text-2)" }}>
+                    가격대 <span className="font-black tabular-nums" style={{ color: "var(--accent-press)" }}>{selected.price_range}</span>
+                  </div>
+                )}
+                {selected.menu_items.slice(0, 3).map((it, i) => (
+                  <div key={i} className="flex justify-between text-[12.5px] py-0.5">
+                    <span className="truncate" style={{ color: "var(--text)" }}>{it.name}</span>
+                    {it.price && <span className="tabular-nums shrink-0 ml-2" style={{ color: "var(--text-2)" }}>{it.price}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selected.note && (
+              <p
+                className="font-display text-[13.5px] leading-relaxed line-clamp-3 italic"
+                style={{ color: "var(--text)", borderLeft: "2px solid var(--accent)", paddingLeft: 10 }}
+              >
+                {selected.note}
+              </p>
+            )}
+          </div>
+
           {/* Action row */}
-          <div className="flex gap-1 px-3 pb-3">
+          <div className="flex gap-1.5 px-3 py-3 shrink-0" style={{ borderTop: "0.5px solid var(--separator)" }}>
             <a
               href={`https://map.kakao.com/link/to/${encodeURIComponent(selected.name)},${selected.lat},${selected.lng}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 h-10 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1.5 text-white"
+              className="flex-1 h-11 rounded-xl text-[13.5px] font-bold flex items-center justify-center gap-1.5 text-white"
               style={{ background: "var(--accent)" }}
               onClick={() => haptic("light")}
             >
@@ -456,7 +593,7 @@ export default function KakaoMap({ restaurants }: Props) {
             </a>
             <Link
               href={`/restaurants/${selected.id}`}
-              className="flex-1 h-10 rounded-xl text-[13px] font-bold flex items-center justify-center"
+              className="flex-1 h-11 rounded-xl text-[13.5px] font-bold flex items-center justify-center"
               style={{ background: "var(--bg)", color: "var(--text)" }}
             >
               상세 보기
