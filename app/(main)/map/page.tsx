@@ -13,8 +13,8 @@ export default async function MapPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 3 queries in parallel — restaurants는 lat/lng 있는 것만, 나머지는 user 단위
-  const [restaurantsRes, visitsRes, wishlistRes] = await Promise.all([
+  // 4 queries in parallel — restaurants는 lat/lng 있는 것만, 나머지는 user 단위
+  const [restaurantsRes, visitsRes, wishlistRes, scoresRes] = await Promise.all([
     supabase
       .from("restaurants")
       .select(
@@ -32,6 +32,10 @@ export default async function MapPage() {
       .eq("owner_id", user!.id)
       .eq("kind", "wishlist")
       .maybeSingle(),
+    supabase
+      .from("restaurant_scores")
+      .select("restaurant_id, tier, elo")
+      .eq("user_id", user!.id),
   ]);
 
   const restaurants = restaurantsRes.data ?? [];
@@ -51,6 +55,12 @@ export default async function MapPage() {
     (wishlistRes.data as { collection_items?: { restaurant_id: string }[] } | null)
       ?.collection_items ?? [];
   for (const it of wishItems) wishIds.add(it.restaurant_id);
+
+  // Pairwise tier per restaurant
+  const tierMap = new Map<string, number>();
+  for (const s of scoresRes.data ?? []) {
+    if (s.tier != null) tierMap.set(s.restaurant_id, s.tier);
+  }
 
   type ImageRow = { storage_path: string; is_primary: boolean | null; blur_data_url: string | null };
   type BusinessHours = Record<string, string> | null;
@@ -74,6 +84,7 @@ export default async function MapPage() {
         is_wishlist: wishIds.has(r.id),
         visit_count: agg?.count ?? 0,
         last_visit: agg?.last ?? null,
+        tier: tierMap.has(r.id) ? (tierMap.get(r.id) as 0 | 1 | 2) : null,
         storage_path: primary?.storage_path ?? null,
         blur_data_url: primary?.blur_data_url ?? null,
         phone: r.phone ?? null,

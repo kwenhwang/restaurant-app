@@ -30,6 +30,7 @@ export interface MarkerData {
   is_wishlist: boolean;
   visit_count: number;
   last_visit: string | null;
+  tier: 0 | 1 | 2 | null;
   storage_path: string | null;
   blur_data_url: string | null;
   phone: string | null;
@@ -38,6 +39,8 @@ export interface MarkerData {
   price_range: string | null;
   menu_items: { name: string; price: string | null }[];
 }
+
+type QualityFilter = "all" | "top" | "rated4" | "fav" | "wish" | "unrated" | "tier0";
 
 const WEEKDAY: ("sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat")[] = [
   "sun", "mon", "tue", "wed", "thu", "fri", "sat",
@@ -134,20 +137,52 @@ export default function KakaoMap({ restaurants }: Props) {
   const [ready, setReady] = useState(false);
 
   const [category, setCategory] = useState<string>("전체");
-  const [favOnly, setFavOnly] = useState(false);
-  const [wishOnly, setWishOnly] = useState(false);
+  const [quality, setQuality] = useState<QualityFilter>("all");
   const [query, setQuery] = useState("");
+
+  // viewport bounds (sw, ne) — updated on idle. Lets us flag off-screen markers.
+  const [bounds, setBounds] = useState<{ sw: { lat: number; lng: number }; ne: { lat: number; lng: number } } | null>(null);
 
   // Filter pipeline — drives which markers are visible.
   const filtered = useMemo(() => {
     return restaurants.filter((r) => {
       if (category !== "전체" && r.category !== category) return false;
-      if (favOnly && !r.is_favorite) return false;
-      if (wishOnly && !r.is_wishlist) return false;
+      if (quality === "top" && (r.rating ?? 0) < 5) return false;
+      if (quality === "rated4" && (r.rating ?? 0) < 4) return false;
+      if (quality === "fav" && !r.is_favorite) return false;
+      if (quality === "wish" && !r.is_wishlist) return false;
+      if (quality === "unrated" && (r.rating != null || r.tier != null)) return false;
+      if (quality === "tier0" && r.tier !== 0) return false;
       if (query.trim() && !r.name.toLowerCase().includes(query.trim().toLowerCase())) return false;
       return true;
     });
-  }, [restaurants, category, favOnly, wishOnly, query]);
+  }, [restaurants, category, quality, query]);
+
+  // Off-screen markers — projected onto the viewport edge so users see a hint.
+  const offscreen = useMemo(() => {
+    if (!bounds) return [];
+    const cx = (bounds.sw.lng + bounds.ne.lng) / 2;
+    const cy = (bounds.sw.lat + bounds.ne.lat) / 2;
+    return filtered
+      .map((r) => {
+        const inside = r.lat >= bounds.sw.lat && r.lat <= bounds.ne.lat && r.lng >= bounds.sw.lng && r.lng <= bounds.ne.lng;
+        if (inside) return null;
+        // Bearing from viewport center (0=N, 90=E)
+        const dx = r.lng - cx;
+        const dy = r.lat - cy;
+        const bearing = (Math.atan2(dx, dy) * 180) / Math.PI;
+        // Haversine for distance display
+        const R = 6371000;
+        const dLat = ((r.lat - cy) * Math.PI) / 180;
+        const dLng = ((r.lng - cx) * Math.PI) / 180;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos((cy * Math.PI) / 180) * Math.cos((r.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+        const meters = 2 * R * Math.asin(Math.sqrt(a));
+        return { r, bearing, meters };
+      })
+      .filter((x): x is { r: MarkerData; bearing: number; meters: number } => x !== null)
+      .sort((a, b) => a.meters - b.meters)
+      .slice(0, 8); // cap so the rim doesn't get cluttered
+  }, [filtered, bounds]);
 
   // 1) Load SDK + create map (once)
   useEffect(() => {
@@ -161,6 +196,26 @@ export default function KakaoMap({ restaurants }: Props) {
           : new window.kakao.maps.LatLng(37.5665, 126.978);
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: 5 });
         mapInstance.current = map;
+
+        // Track viewport so off-screen markers can render as edge chips.
+        const kakao = window.kakao.maps as unknown as {
+          event: { addListener: (t: object, e: string, cb: () => void) => void };
+        };
+        const updateBounds = () => {
+          const b = (map as unknown as {
+            getBounds: () => {
+              getSouthWest: () => { getLat: () => number; getLng: () => number };
+              getNorthEast: () => { getLat: () => number; getLng: () => number };
+            };
+          }).getBounds();
+          setBounds({
+            sw: { lat: b.getSouthWest().getLat(), lng: b.getSouthWest().getLng() },
+            ne: { lat: b.getNorthEast().getLat(), lng: b.getNorthEast().getLng() },
+          });
+        };
+        kakao.event.addListener(map, "idle", updateBounds);
+        setTimeout(updateBounds, 0); // initial
+
         setReady(true);
       });
     }
@@ -304,7 +359,30 @@ export default function KakaoMap({ restaurants }: Props) {
     );
   }
 
-  const filterActive = category !== "전체" || favOnly || wishOnly || query.trim() !== "";
+  const filterActive = category !== "전체" || quality !== "all" || query.trim() !== "";
+
+  // Pan to a specific marker — used by the off-screen indicator chips.
+  function panToMarker(r: MarkerData) {
+    if (!mapInstance.current) return;
+    haptic("light");
+    mapInstance.current.setCenter(new window.kakao.maps.LatLng(r.lat, r.lng));
+    setSelected(r);
+  }
+
+  // Fit all filtered markers into the viewport — "모두 보기" button.
+  function fitAll() {
+    if (!mapInstance.current || filtered.length === 0) return;
+    haptic("light");
+    const kakao = window.kakao.maps as unknown as {
+      LatLngBounds: new () => {
+        extend: (latlng: KakaoLatLng) => void;
+      };
+      LatLng: new (lat: number, lng: number) => KakaoLatLng;
+    };
+    const b = new kakao.LatLngBounds();
+    for (const r of filtered) b.extend(new kakao.LatLng(r.lat, r.lng));
+    (mapInstance.current as unknown as { setBounds: (b: object, p?: number) => void }).setBounds(b, 40);
+  }
 
   return (
     <div className="relative h-full w-full">
@@ -364,32 +442,37 @@ export default function KakaoMap({ restaurants }: Props) {
               {c}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => setFavOnly((v) => !v)}
-            aria-pressed={favOnly}
-            className="shrink-0 h-8 px-3 rounded-full text-[12.5px] font-bold whitespace-nowrap transition-transform active:scale-95"
-            style={{
-              background: favOnly ? "#E5484D" : "var(--surface)",
-              color: favOnly ? "white" : "var(--text)",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
-            }}
-          >
-            ♥ 즐겨찾기
-          </button>
-          <button
-            type="button"
-            onClick={() => setWishOnly((v) => !v)}
-            aria-pressed={wishOnly}
-            className="shrink-0 h-8 px-3 rounded-full text-[12.5px] font-bold whitespace-nowrap transition-transform active:scale-95"
-            style={{
-              background: wishOnly ? "#C9A07A" : "var(--surface)",
-              color: wishOnly ? "white" : "var(--text)",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
-            }}
-          >
-            🔖 위시
-          </button>
+        </div>
+
+        {/* Quality filters — single-select pills based on my own evaluation */}
+        <div
+          className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1"
+          style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+        >
+          {([
+            { k: "all", label: "전체", color: "var(--accent)" },
+            { k: "fav", label: "♥ 즐겨찾기", color: "#E5484D" },
+            { k: "top", label: "⭐ 5점", color: "#D4AF37" },
+            { k: "rated4", label: "⭐ 4점+", color: "#D4AF37" },
+            { k: "tier0", label: "🟢 좋아함", color: "#22A06B" },
+            { k: "wish", label: "🔖 아직 안 간 곳", color: "#C9A07A" },
+            { k: "unrated", label: "❔ 평가 안 함", color: "#6B7280" },
+          ] as { k: QualityFilter; label: string; color: string }[]).map((f) => (
+            <button
+              key={f.k}
+              type="button"
+              onClick={() => setQuality(f.k)}
+              aria-pressed={quality === f.k}
+              className="shrink-0 h-8 px-3 rounded-full text-[12.5px] font-bold whitespace-nowrap transition-transform active:scale-95"
+              style={{
+                background: quality === f.k ? f.color : "var(--surface)",
+                color: quality === f.k ? "white" : "var(--text)",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
 
         {filterActive && (
@@ -401,7 +484,21 @@ export default function KakaoMap({ restaurants }: Props) {
       </div>
 
       {/* Floating buttons (right) */}
-      <div className="absolute right-3 flex flex-col gap-2 z-10" style={{ bottom: selected ? 200 : 24 }}>
+      <div className="absolute right-3 flex flex-col gap-2 z-10" style={{ bottom: selected ? "calc(62% + 16px)" : 24 }}>
+        {filtered.length > 0 && (
+          <button
+            type="button"
+            onClick={fitAll}
+            aria-label="모두 보기"
+            className="w-12 h-12 rounded-full flex items-center justify-center transition-transform active:scale-90"
+            style={{
+              background: "var(--surface)",
+              boxShadow: "0 8px 22px rgba(0,0,0,0.16)",
+            }}
+          >
+            <Sym name="map" size={18} />
+          </button>
+        )}
         <button
           type="button"
           onClick={goToMyLocation}
@@ -415,6 +512,62 @@ export default function KakaoMap({ restaurants }: Props) {
           <Sym name="location.fill" size={20} />
         </button>
       </div>
+
+      {/* Off-screen indicators — chip on the rim showing direction + distance.
+          Game-style minimap pattern: bearing 0° = top, 90° = right, etc.
+          Each chip is positioned by translating along (sin·θ, -cos·θ) from
+          viewport center, then clamped to the rim with a ~36px inset. */}
+      {!selected && offscreen.map(({ r, bearing, meters }) => {
+        const rad = (bearing * Math.PI) / 180;
+        const sx = Math.sin(rad);
+        const sy = -Math.cos(rad);
+        // Clamp to a rounded-rect rim: pick the larger axis so the chip sits
+        // on whichever edge the bearing points to.
+        const a = Math.max(Math.abs(sx), Math.abs(sy));
+        const ux = sx / a;
+        const uy = sy / a;
+        // Viewport halves minus inset; lays the chip just inside the edge.
+        const insetTop = 130; // clear search + chips overlay
+        const insetBottom = 24;
+        const insetSide = 12;
+        const left = `calc(50% + ${ux * 50}vw - 36px - ${ux * insetSide}px)`;
+        const top = `calc(${insetTop}px + (100vh - ${insetTop + insetBottom + 96}px) * ${(uy + 1) / 2})`;
+        const kmLabel = meters >= 1000 ? `${(meters / 1000).toFixed(1)}km` : `${Math.round(meters)}m`;
+        const emoji = categoryStyle(r.category).emoji;
+        const color = r.is_favorite ? "#E5484D" : (r.rating ?? 0) >= 5 ? "#D4AF37" : "var(--accent)";
+        // Arrow rotation: 0deg points up, bearing 0 = north (up in our screen)
+        return (
+          <button
+            key={r.id}
+            type="button"
+            onClick={() => panToMarker(r)}
+            aria-label={`${r.name}으로 이동 — ${kmLabel}`}
+            className="absolute z-10 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold text-white whitespace-nowrap transition-transform active:scale-90 animate-fade-up"
+            style={{
+              left,
+              top,
+              background: color,
+              boxShadow: "0 4px 14px rgba(0,0,0,0.22)",
+              maxWidth: 132,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                display: "inline-block",
+                transform: `rotate(${bearing}deg)`,
+                fontSize: 10,
+                lineHeight: 1,
+              }}
+            >
+              ➤
+            </span>
+            <span>{emoji}</span>
+            <span className="truncate">{r.name}</span>
+            <span style={{ opacity: 0.85 }}>· {kmLabel}</span>
+          </button>
+        );
+      })}
 
       {/* Error toast */}
       {error && (
