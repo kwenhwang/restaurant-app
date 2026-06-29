@@ -3,10 +3,10 @@ import { buildMonthlyReport, activeMonths } from "@/lib/monthly-report";
 
 const RESTAURANTS = [
   // Created in May
-  { id: "a", name: "굴다리", category: "한식", address: "서울 강남구 ...", rating: 5, created_at: "2026-05-01T00:00:00Z" },
-  { id: "b", name: "교촌", category: "한식", address: "서울 강남구 ...", rating: 4, created_at: "2026-05-15T00:00:00Z" },
-  // Created earlier
-  { id: "c", name: "스벅", category: "카페", address: "서울 송파구 ...", rating: 3, created_at: "2026-04-01T00:00:00Z" },
+  { id: "a", name: "굴다리", category: "한식", address: "서울 강남구 ...", tier: 0 as const, created_at: "2026-05-01T00:00:00Z" },
+  { id: "b", name: "교촌", category: "한식", address: "서울 강남구 ...", tier: 1 as const, created_at: "2026-05-15T00:00:00Z" },
+  // Created earlier — tier 0 but pre-existing, should NOT be in favorites
+  { id: "c", name: "스벅", category: "카페", address: "서울 송파구 ...", tier: 0 as const, created_at: "2026-04-01T00:00:00Z" },
 ];
 
 const VISITS = [
@@ -40,11 +40,11 @@ describe("monthly-report — buildMonthlyReport", () => {
     expect(r.topVisited[0].visits).toBe(2);
   });
 
-  it("favorites picks 5-star NEW discoveries only", () => {
+  it("favorites picks tier 0 (좋아함) NEW discoveries only", () => {
     const r = buildMonthlyReport({ yyyymm: "2026-05", restaurants: RESTAURANTS, visits: VISITS });
     const ids = r.favorites.map((f) => f.id);
-    expect(ids).toContain("a");      // 5★ created in May
-    expect(ids).not.toContain("c");  // 5★ but pre-existing
+    expect(ids).toContain("a");      // tier 0 created in May
+    expect(ids).not.toContain("c");  // tier 0 but pre-existing
   });
 
   it("longest streak detects consecutive days", () => {
@@ -62,6 +62,13 @@ describe("monthly-report — buildMonthlyReport", () => {
     const r = buildMonthlyReport({ yyyymm: "2026-05", restaurants: RESTAURANTS, visits: VISITS });
     // a, b are 강남구; c is 송파구 — 강남구 wins (2 vs 1)
     expect(r.topRegion).toBe("강남구");
+  });
+
+  it("tierBreakdown counts visited restaurants by tier", () => {
+    const r = buildMonthlyReport({ yyyymm: "2026-05", restaurants: RESTAURANTS, visits: VISITS });
+    expect(r.tierBreakdown.loved).toBe(2); // a, c
+    expect(r.tierBreakdown.ok).toBe(1);     // b
+    expect(r.tierBreakdown.meh).toBe(0);
   });
 });
 

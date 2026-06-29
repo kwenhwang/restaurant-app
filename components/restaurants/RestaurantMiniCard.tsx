@@ -3,8 +3,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import Sym from "@/components/ui/Sym";
 import CategoryPlaceholder from "@/components/restaurants/CategoryPlaceholder";
+import { tierMeta, type Tier } from "@/lib/tier";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
@@ -13,7 +13,7 @@ type Restaurant = {
   id: string;
   name: string;
   category?: string | null;
-  rating?: number | null;
+  tier?: Tier;
   images?: Img[];
 };
 
@@ -48,15 +48,23 @@ export default function RestaurantMiniCard({
         ) : (
           <CategoryPlaceholder category={restaurant.category} size="thumb" />
         )}
-        <div
-          className="absolute left-2 bottom-2 inline-flex items-center gap-1 px-2 py-1 rounded-[10px]"
-          style={{ background: "rgba(20,16,12,0.55)", backdropFilter: "blur(8px)", color: "#fff" }}
-        >
-          <Sym name="star.fill" size={11} className="text-accent" />
-          <span className="font-extrabold text-[12.5px] tabular-nums">
-            {restaurant.rating ? restaurant.rating.toFixed(1) : "—"}
-          </span>
-        </div>
+        {(() => {
+          const tm = tierMeta(restaurant.tier);
+          if (!tm) return null;
+          return (
+            <div
+              className="absolute left-2 bottom-2 inline-flex items-center gap-1 px-2 py-1 rounded-[10px] font-extrabold text-[11.5px]"
+              style={{
+                background: "rgba(20,16,12,0.55)",
+                backdropFilter: "blur(8px)",
+                color: "#fff",
+              }}
+            >
+              <span style={{ fontSize: 13 }}>{tm.emoji}</span>
+              {tm.label}
+            </div>
+          );
+        })()}
       </div>
       <div className="pt-2 px-0.5">
         <div className="font-display text-[15.5px] font-extrabold truncate">{restaurant.name}</div>

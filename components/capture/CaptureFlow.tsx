@@ -30,7 +30,6 @@ interface NearbyMine {
   lat: number | null;
   lng: number | null;
   category: string | null;
-  rating: number | null;
   distance: number;
   images?: { id: string; storage_path: string; is_primary?: boolean }[];
 }
@@ -68,7 +67,6 @@ export default function CaptureFlow() {
 
   const [picked, setPicked] = useState<Picked | null>(null);
   const [manualName, setManualName] = useState("");
-  const [rating, setRating] = useState<number | null>(null);
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -176,7 +174,6 @@ export default function CaptureFlow() {
           user_id: string;
           name: string;
           category: string | null;
-          rating: number | null;
           note: string | null;
           address: string | null;
           lat: number | null;
@@ -186,7 +183,6 @@ export default function CaptureFlow() {
           name,
           category:
             picked.kind === "kakao" ? picked.r.category : analysis?.category ?? null,
-          rating,
           note: memo || (analysis?.description ?? null),
           address: picked.kind === "kakao" ? picked.r.address : null,
           lat:
@@ -366,7 +362,6 @@ export default function CaptureFlow() {
               setManualName(parsed.name);
               setPicked({ kind: "manual", name: parsed.name });
             }
-            if (parsed.rating) setRating(parsed.rating);
             if (parsed.memo) setMemo(parsed.memo);
             // category from voice will be applied at save time via analysis fallback;
             // we stash it into a fake analysis to feed into the save payload

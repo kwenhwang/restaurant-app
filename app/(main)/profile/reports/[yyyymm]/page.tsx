@@ -32,24 +32,37 @@ export default async function MonthlyReportPage({ params }: Props) {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [{ data: restaurants }, { data: visits }] = await Promise.all([
+  const [{ data: restaurants }, { data: visits }, { data: scores }] = await Promise.all([
     supabase
       .from("restaurants")
-      .select("id, name, category, address, rating, created_at")
+      .select("id, name, category, address, created_at")
       .eq("user_id", user.id),
     supabase
       .from("visits")
       .select("restaurant_id, visited_at")
       .eq("user_id", user.id),
+    supabase
+      .from("restaurant_scores")
+      .select("restaurant_id, tier")
+      .eq("user_id", user.id),
   ]);
+
+  const tierByRid = new Map<string, 0 | 1 | 2>();
+  for (const s of scores ?? []) {
+    if (s.tier != null) tierByRid.set(s.restaurant_id, s.tier as 0 | 1 | 2);
+  }
+  const decoratedRestaurants = (restaurants ?? []).map((r) => ({
+    ...r,
+    tier: tierByRid.get(r.id) ?? null,
+  }));
 
   const report = buildMonthlyReport({
     yyyymm,
-    restaurants: restaurants ?? [],
+    restaurants: decoratedRestaurants,
     visits: visits ?? [],
   });
 
-  const months = new Set(activeMonths(visits ?? [], restaurants ?? []));
+  const months = new Set(activeMonths(visits ?? [], decoratedRestaurants));
   const prev = adj(yyyymm, -1);
   const next = adj(yyyymm, 1);
   const hasPrev = months.has(prev);
@@ -110,7 +123,7 @@ export default async function MonthlyReportPage({ params }: Props) {
 
           {/* Mini grid */}
           <section className="px-[18px] mt-4 grid grid-cols-3 gap-3">
-            <StatTile label="평균 평점" value={report.averageRating != null ? `${report.averageRating}` : "—"} unit={report.averageRating != null ? "/5" : ""} />
+            <StatTile label="😍 좋아함" value={report.tierBreakdown.loved.toString()} unit="곳" />
             <StatTile label="최장 연속" value={report.longestStreak.toString()} unit="일" />
             <StatTile label="다녀온 곳" value={report.uniqueRestaurants.toString()} unit="곳" />
           </section>
@@ -184,11 +197,11 @@ export default async function MonthlyReportPage({ params }: Props) {
             </section>
           )}
 
-          {/* Favorites — new discoveries rated 5★ */}
+          {/* Favorites — new discoveries marked 좋아함 */}
           {report.favorites.length > 0 && (
             <section className="px-[18px] mt-6">
               <h2 className="font-display text-[18px] font-extrabold mb-2.5 px-0.5">
-                ⭐ 이번 달 최애
+                😍 이번 달 최애
               </h2>
               <div className="flex flex-wrap gap-2">
                 {report.favorites.map((r) => (

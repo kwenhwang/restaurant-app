@@ -1,8 +1,8 @@
 // Aggregates one calendar month of activity for the monthly food report.
 //
 // Inputs: the user's restaurants (id, name, category, address, created_at,
-// rating) + visits (restaurant_id, visited_at) — same shapes the home and
-// profile pages already pull.
+// tier) + visits (restaurant_id, visited_at) — same shapes the home and
+// profile pages already pull. tier(0/1/2/null) replaces the old 1~5 rating.
 //
 // Output: a single MonthlyReport object the page renders. Pure function,
 // safe to memoize or run on the edge.
@@ -12,7 +12,7 @@ export interface RestaurantRow {
   name: string;
   category: string | null;
   address: string | null;
-  rating: number | null;
+  tier?: 0 | 1 | 2 | null;
   created_at?: string | null;
 }
 
@@ -39,14 +39,14 @@ export interface MonthlyReport {
   categoryShare: { category: string; count: number; emoji: string }[];
   /** Top-visited restaurants this month */
   topVisited: { id: string; name: string; category: string | null; visits: number }[];
-  /** Favorite picks — 5★ rated restaurants from this month's new finds */
+  /** Favorite picks — tier 0 (좋아함) restaurants from this month's new finds */
   favorites: { id: string; name: string; category: string | null }[];
   /** Most common 시/구 from addresses */
   topRegion: string | null;
   /** "Streak" — longest run of consecutive days with at least 1 visit */
   longestStreak: number;
-  /** Average rating of restaurants visited this month (those with ratings) */
-  averageRating: number | null;
+  /** Tier distribution of restaurants visited this month */
+  tierBreakdown: { loved: number; ok: number; meh: number; unrated: number };
 }
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -145,9 +145,9 @@ export function buildMonthlyReport(opts: {
       };
     });
 
-  // 5-star new finds
+  // tier 0 (좋아함) 신규 발견
   const favorites = newDiscoveriesList
-    .filter((r) => (r.rating ?? 0) >= 5)
+    .filter((r) => r.tier === 0)
     .map((r) => ({ id: r.id, name: r.name, category: r.category ?? null }))
     .slice(0, 5);
 
@@ -175,15 +175,15 @@ export function buildMonthlyReport(opts: {
     }
   }
 
-  // Average rating of restaurants visited this month
-  const ratings: number[] = [];
+  // Tier breakdown of restaurants visited this month
+  const tierBreakdown = { loved: 0, ok: 0, meh: 0, unrated: 0 };
   for (const rid of visitCountByRid.keys()) {
     const r = byId.get(rid);
-    if (r?.rating != null) ratings.push(r.rating);
+    if (r?.tier === 0) tierBreakdown.loved += 1;
+    else if (r?.tier === 1) tierBreakdown.ok += 1;
+    else if (r?.tier === 2) tierBreakdown.meh += 1;
+    else tierBreakdown.unrated += 1;
   }
-  const averageRating = ratings.length
-    ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
-    : null;
 
   return {
     yyyymm,
@@ -200,7 +200,7 @@ export function buildMonthlyReport(opts: {
     favorites,
     topRegion,
     longestStreak,
-    averageRating,
+    tierBreakdown,
   };
 }
 

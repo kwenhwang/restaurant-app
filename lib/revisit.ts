@@ -7,11 +7,11 @@
  *
  * Score by:
  * - 즐겨찾기: +60
- * - rating >= 4: +25, +10 extra if 5
+ * - tier 0 (좋아함): +35, tier 1: +5
  * - wishlist (zero visits, member of "가고 싶은 곳"): +45
  * - days since last visit / 30: +1 per month, capped at +24 (2 years)
  *
- * Threshold: favorite OR rating>=4 OR is_wishlist, with appropriate age gate.
+ * Threshold: favorite OR tier 0 OR is_wishlist, with appropriate age gate.
  * Wishlist items become candidates immediately (no 30-day wait).
  *
  * Returns up to N candidates sorted by score descending.
@@ -21,7 +21,7 @@ export interface RevisitInput {
   id: string;
   name: string;
   category?: string | null;
-  rating?: number | null;
+  tier?: 0 | 1 | 2 | null;
   is_favorite?: boolean | null;
   is_wishlist?: boolean | null;
   last_visit?: string | null;
@@ -32,7 +32,7 @@ export interface RevisitCandidate {
   id: string;
   name: string;
   category: string | null;
-  rating: number | null;
+  tier: 0 | 1 | 2 | null;
   is_favorite: boolean;
   is_wishlist: boolean;
   /** Days since last visit, or 9999 for wishlist items that have never been visited. */
@@ -58,14 +58,14 @@ export function pickRevisitCandidates(
   for (const r of restaurants) {
     const favorite = !!r.is_favorite;
     const wishlist = !!r.is_wishlist;
-    const rating = r.rating ?? 0;
+    const tier = r.tier ?? null;
     const everVisited = !!r.last_visit;
 
     // Wishlist (never visited) → always eligible.
-    // Visited favorites / 4+★ → eligible only if 30+ days since last visit.
+    // Visited favorites / tier 0 (좋아함) → eligible only if 30+ days since last visit.
     if (wishlist && !everVisited) {
       // pass
-    } else if (favorite || rating >= 4) {
+    } else if (favorite || tier === 0) {
       // pass
     } else {
       continue;
@@ -88,8 +88,8 @@ export function pickRevisitCandidates(
 
     let score = 0;
     if (favorite) score += 60;
-    if (rating >= 4) score += 25;
-    if (rating === 5) score += 10;
+    if (tier === 0) score += 35;
+    else if (tier === 1) score += 5;
     if (wishlist) score += 45;
     score += Math.min(24, Math.floor(daysSince / 30));
 
@@ -99,7 +99,7 @@ export function pickRevisitCandidates(
       id: r.id,
       name: r.name,
       category: r.category ?? null,
-      rating: r.rating ?? null,
+      tier,
       is_favorite: favorite,
       is_wishlist: wishlist,
       days_since: daysSince,

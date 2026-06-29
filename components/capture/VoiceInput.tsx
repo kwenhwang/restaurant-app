@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 interface ParsedMemo {
   name: string | null;
   category: string | null;
-  rating: number | null;
   memo: string | null;
 }
 

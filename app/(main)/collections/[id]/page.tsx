@@ -32,7 +32,7 @@ export default async function CollectionDetailPage({ params }: Props) {
   const { data: items } = await supabase
     .from("collection_items")
     .select(
-      "restaurant_id, order_index, created_at, restaurants!inner(id, name, category, rating, address, is_favorite, restaurant_images(id, storage_path, is_primary))",
+      "restaurant_id, order_index, created_at, restaurants!inner(id, name, category, address, is_favorite, restaurant_images(id, storage_path, is_primary))",
     )
     .eq("collection_id", id)
     .order("order_index", { ascending: true })
@@ -44,13 +44,26 @@ export default async function CollectionDetailPage({ params }: Props) {
       id: string;
       name: string;
       category?: string | null;
-      rating?: number | null;
       address?: string | null;
       is_favorite?: boolean | null;
       restaurant_images?: { id: string; storage_path: string; is_primary: boolean | null }[];
     };
   };
   const rows = (items ?? []) as unknown as Item[];
+
+  // tier lookup (대결 평가 결과) — 컬렉션 내 가게들 한 번에
+  const restaurantIds = rows.map((r) => r.restaurant_id);
+  const { data: scoreRows } = restaurantIds.length
+    ? await supabase
+        .from("restaurant_scores")
+        .select("restaurant_id, tier")
+        .eq("user_id", user.id)
+        .in("restaurant_id", restaurantIds)
+    : { data: [] };
+  const tierByRid = new Map<string, 0 | 1 | 2>();
+  for (const s of scoreRows ?? []) {
+    if (s.tier != null) tierByRid.set(s.restaurant_id, s.tier as 0 | 1 | 2);
+  }
 
   return (
     <div className="pb-24">
@@ -145,9 +158,9 @@ export default async function CollectionDetailPage({ params }: Props) {
                     id: it.restaurants.id,
                     name: it.restaurants.name,
                     category: it.restaurants.category ?? null,
-                    rating: it.restaurants.rating ?? null,
                     address: it.restaurants.address ?? null,
                     is_favorite: it.restaurants.is_favorite ?? false,
+                    tier: tierByRid.get(it.restaurant_id) ?? null,
                     images: (it.restaurants.restaurant_images ?? []).map((im) => ({
                       id: im.id,
                       storage_path: im.storage_path,

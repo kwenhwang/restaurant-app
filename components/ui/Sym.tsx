@@ -8,7 +8,7 @@ type SymName =
   | "xmark" | "mappin" | "mappin.and.ellipse" | "location.fill" | "fork.knife"
   | "star.fill" | "star" | "house" | "house.fill" | "map" | "map.fill"
   | "calendar" | "calendar.fill" | "person" | "person.fill"
-  | "heart" | "heart.fill" | "bookmark.fill" | "camera" | "photo"
+  | "heart" | "heart.fill" | "bookmark" | "bookmark.fill" | "camera" | "photo"
   | "arrow.up.right" | "arrow.left" | "pencil" | "trash"
   | "plus.circle.fill" | "sparkles" | "sparkle" | "square.and.pencil"
   | "square.and.arrow.up" | "phone.fill" | "clock" | "link" | "flame.fill"
@@ -76,6 +76,8 @@ export default function Sym({ name, size = 22, strokeWidth = 1.8, className }: P
       return (<svg {...p}><path d="M12 20s-7-4.5-7-10a4 4 0 017-2.7A4 4 0 0119 10c0 5.5-7 10-7 10z"/></svg>);
     case "heart.fill":
       return (<svg {...fp}><path d="M12 20s-7-4.5-7-10a4 4 0 017-2.7A4 4 0 0119 10c0 5.5-7 10-7 10z"/></svg>);
+    case "bookmark":
+      return (<svg {...p}><path d="M6 3.5h12a1 1 0 011 1V21l-7-4-7 4V4.5a1 1 0 011-1z"/></svg>);
     case "bookmark.fill":
       return (<svg {...fp}><path d="M6 3.5h12a1 1 0 011 1V21l-7-4-7 4V4.5a1 1 0 011-1z"/></svg>);
     case "camera":

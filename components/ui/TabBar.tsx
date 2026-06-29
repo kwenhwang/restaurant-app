@@ -7,13 +7,13 @@ import Sym from "./Sym";
 type Item = {
   href: string;
   label: string;
-  icon: "house" | "map" | "calendar" | "person";
+  icon: "house" | "map" | "bookmark" | "person";
 };
 
 const ITEMS: Item[] = [
   { href: "/", label: "맛집", icon: "house" },
   { href: "/map", label: "지도", icon: "map" },
-  { href: "/visits", label: "기록", icon: "calendar" },
+  { href: "/wishlist", label: "찜", icon: "bookmark" },
   { href: "/profile", label: "프로필", icon: "person" },
 ];
 

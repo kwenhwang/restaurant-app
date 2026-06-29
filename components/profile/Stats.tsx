@@ -8,7 +8,7 @@ interface Restaurant {
   id: string;
   name: string;
   category: string | null;
-  rating: number | null;
+  tier?: 0 | 1 | 2 | null;
   is_favorite?: boolean;
 }
 interface Visit {
@@ -24,11 +24,7 @@ export default function Stats({ restaurants, visits }: Props) {
   const total = restaurants.length;
   const visitTotal = visits.length;
   const favorites = restaurants.filter((r) => r.is_favorite).length;
-  const avgRating =
-    total > 0
-      ? restaurants.reduce((sum, r) => sum + (r.rating ?? 0), 0) /
-          restaurants.filter((r) => r.rating).length || 0
-      : 0;
+  const loved = restaurants.filter((r) => r.tier === 0).length;
 
   const byCategory = new Map<string, number>();
   for (const r of restaurants) {
@@ -60,7 +56,7 @@ export default function Stats({ restaurants, visits }: Props) {
           <StatCard label="기록한 맛집" value={total} />
           <StatCard label="방문 횟수" value={visitTotal} />
           <StatCard label="즐겨찾기" value={favorites} accent />
-          <StatCard label="평균 평점" value={avgRating > 0 ? avgRating.toFixed(1) : "—"} />
+          <StatCard label="😍 좋아함" value={loved} />
         </div>
       </div>
 

@@ -12,13 +12,24 @@ export default async function OGImage({ params }: { params: { token: string } })
   const admin = createAdminClient();
   const { data: restaurant } = await admin
     .from("restaurants")
-    .select("name, category, rating, note")
+    .select("id, user_id, name, category, note")
     .eq("share_token", params.token)
     .single();
 
+  let tier: 0 | 1 | 2 | null = null;
+  if (restaurant?.id && restaurant?.user_id) {
+    const { data: score } = await admin
+      .from("restaurant_scores")
+      .select("tier")
+      .eq("restaurant_id", restaurant.id)
+      .eq("user_id", restaurant.user_id)
+      .maybeSingle();
+    tier = (score?.tier ?? null) as 0 | 1 | 2 | null;
+  }
+
   const name = restaurant?.name ?? "맛집";
   const category = restaurant?.category ?? "맛집";
-  const rating = restaurant?.rating;
+  const tierLabel = tier === 0 ? "😍 좋아함" : tier === 1 ? "🙂 괜찮음" : tier === 2 ? "😐 별로" : "";
   const note = restaurant?.note?.slice(0, 100) ?? "공유 받은 가게";
 
   return new ImageResponse(
@@ -50,7 +61,7 @@ export default async function OGImage({ params }: { params: { token: string } })
             }}
           >
             #{category}
-            {rating ? ` · ${"★".repeat(rating)}` : ""}
+            {tierLabel ? ` · ${tierLabel}` : ""}
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

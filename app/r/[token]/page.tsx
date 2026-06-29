@@ -8,7 +8,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createAdminClient } from "@/lib/supabase/admin";
-import Stars from "@/components/ui/Stars";
 import Sym from "@/components/ui/Sym";
 import CategoryPlaceholder from "@/components/restaurants/CategoryPlaceholder";
 
@@ -43,12 +42,21 @@ export default async function SharedRestaurantPage({
   const { data: restaurant } = await sb
     .from("restaurants")
     .select(
-      "id, name, address, lat, lng, category, rating, note, menu, images:restaurant_images(id, storage_path, is_primary, blur_data_url)"
+      "id, user_id, name, address, lat, lng, category, note, menu, images:restaurant_images(id, storage_path, is_primary, blur_data_url)"
     )
     .eq("share_token", token)
     .single();
 
   if (!restaurant) notFound();
+
+  // Owner의 tier (대결 평가 결과) 조회 — 공개 페이지에서도 표시
+  const { data: score } = await sb
+    .from("restaurant_scores")
+    .select("tier")
+    .eq("restaurant_id", restaurant.id)
+    .eq("user_id", restaurant.user_id)
+    .maybeSingle();
+  const ownerTier = (score?.tier ?? null) as 0 | 1 | 2 | null;
 
   const primary =
     restaurant.images?.find((i: { is_primary?: boolean }) => i.is_primary) ??
@@ -93,11 +101,13 @@ export default async function SharedRestaurantPage({
             {restaurant.name}
           </h1>
           <div className="flex items-center gap-2.5 mt-2.5">
-            {restaurant.rating && (
-              <>
-                <Stars value={restaurant.rating} size={15} />
-                <span className="font-extrabold text-[14px] tabular-nums">{restaurant.rating}.0</span>
-              </>
+            {ownerTier != null && (
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[12.5px] font-extrabold"
+                style={{ background: "rgba(255,255,255,0.22)", backdropFilter: "blur(6px)" }}
+              >
+                {ownerTier === 0 ? "😍 좋아함" : ownerTier === 1 ? "🙂 괜찮음" : "😐 별로"}
+              </span>
             )}
             {restaurant.category && (
               <span className="px-2.5 py-0.5 rounded-full text-[12px] font-bold" style={{ background: "rgba(255,255,255,0.22)", backdropFilter: "blur(6px)" }}>

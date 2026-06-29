@@ -35,7 +35,7 @@ import { saveMenu } from "./menu-action";
 import AddVisit from "@/components/visits/AddVisit";
 import VisitList from "@/components/visits/VisitList";
 import Sym from "@/components/ui/Sym";
-import Stars from "@/components/ui/Stars";
+import { tierMeta } from "@/lib/tier";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
@@ -108,10 +108,15 @@ export default async function RestaurantDetailPage({
   // legacy formula only for rows still missing a score row.
   const { data: allScores } = await supabase
     .from("restaurant_scores")
-    .select("restaurant_id, elo")
+    .select("restaurant_id, elo, tier")
     .eq("user_id", user!.id);
   const eloMap = new Map<string, number>();
-  for (const s of allScores ?? []) eloMap.set(s.restaurant_id, s.elo);
+  const tierMap = new Map<string, number>();
+  for (const s of allScores ?? []) {
+    eloMap.set(s.restaurant_id, s.elo);
+    if (s.tier != null) tierMap.set(s.restaurant_id, s.tier);
+  }
+  const myTier = (tierMap.get(id) ?? null) as 0 | 1 | 2 | null;
 
   const rankInput = (allR ?? []).map((r) => ({
     id: r.id,
@@ -239,15 +244,26 @@ export default async function RestaurantDetailPage({
             {restaurant.name}
           </h1>
           <div className="flex items-center gap-2.5 mt-3">
-            {restaurant.rating && (
-              <>
-                <Stars value={restaurant.rating} size={16} />
-                <span className="font-extrabold text-[15px] tabular-nums">{restaurant.rating}.0</span>
-              </>
-            )}
+            {(() => {
+              const tm = tierMeta(myTier);
+              if (!tm) return null;
+              return (
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-extrabold"
+                  style={{
+                    background: "rgba(255,255,255,0.18)",
+                    backdropFilter: "blur(6px)",
+                    color: "#fff",
+                  }}
+                >
+                  <span style={{ fontSize: 15 }}>{tm.emoji}</span>
+                  {tm.label}
+                </span>
+              );
+            })()}
             {visitCount > 0 && (
               <span className="text-[13.5px] tabular-nums" style={{ color: "rgba(255,255,255,0.85)" }}>
-                · {visitCount}회 방문
+                {myTier != null ? "· " : ""}{visitCount}회 방문
               </span>
             )}
           </div>

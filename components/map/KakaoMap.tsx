@@ -25,7 +25,6 @@ export interface MarkerData {
   lat: number;
   lng: number;
   category: string | null;
-  rating: number | null;
   is_favorite: boolean;
   is_wishlist: boolean;
   visit_count: number;
@@ -40,7 +39,7 @@ export interface MarkerData {
   menu_items: { name: string; price: string | null }[];
 }
 
-type QualityFilter = "all" | "top" | "rated4" | "fav" | "wish" | "unrated" | "tier0";
+type QualityFilter = "all" | "tier0" | "tier01" | "fav" | "wish" | "unrated";
 
 const WEEKDAY: ("sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat")[] = [
   "sun", "mon", "tue", "wed", "thu", "fri", "sat",
@@ -80,7 +79,7 @@ interface Props {
 }
 
 // SVG marker generator — returns a data URL. Color/size shift on
-// favorite·rating·wishlist so the map reads at a glance.
+// favorite·tier·wishlist so the map reads at a glance.
 function markerSvg(opts: {
   color: string;
   ring?: string;
@@ -106,9 +105,9 @@ function markerSvg(opts: {
 
 function pickMarker(r: MarkerData) {
   const emoji = categoryStyle(r.category).emoji;
-  const isTopRated = (r.rating ?? 0) >= 5;
+  const isLoved = r.tier === 0;
   const isFrequent = r.visit_count >= 5;
-  const big = r.is_favorite || isTopRated || isFrequent;
+  const big = r.is_favorite || isLoved || isFrequent;
   const size = big ? 44 : 34;
 
   if (r.is_wishlist && r.visit_count === 0) {
@@ -118,8 +117,12 @@ function pickMarker(r: MarkerData) {
   if (r.is_favorite) {
     return { url: markerSvg({ color: "#E5484D", ring: "#fff", size, emoji }), size };
   }
-  if (isTopRated) {
+  if (isLoved) {
     return { url: markerSvg({ color: "#D4AF37", ring: "#fff", size, emoji }), size };
+  }
+  if (r.tier === 2) {
+    // 별로 — 약하게
+    return { url: markerSvg({ color: "#A38A8A", ring: "#fff", size: 30, emoji }), size: 30 };
   }
   return { url: markerSvg({ color: "#FF6F3D", ring: "#fff", size, emoji }), size };
 }
@@ -147,12 +150,11 @@ export default function KakaoMap({ restaurants }: Props) {
   const filtered = useMemo(() => {
     return restaurants.filter((r) => {
       if (category !== "전체" && r.category !== category) return false;
-      if (quality === "top" && (r.rating ?? 0) < 5) return false;
-      if (quality === "rated4" && (r.rating ?? 0) < 4) return false;
+      if (quality === "tier0" && r.tier !== 0) return false;
+      if (quality === "tier01" && r.tier !== 0 && r.tier !== 1) return false;
       if (quality === "fav" && !r.is_favorite) return false;
       if (quality === "wish" && !r.is_wishlist) return false;
-      if (quality === "unrated" && (r.rating != null || r.tier != null)) return false;
-      if (quality === "tier0" && r.tier !== 0) return false;
+      if (quality === "unrated" && r.tier != null) return false;
       if (query.trim() && !r.name.toLowerCase().includes(query.trim().toLowerCase())) return false;
       return true;
     });
@@ -452,9 +454,8 @@ export default function KakaoMap({ restaurants }: Props) {
           {([
             { k: "all", label: "전체", color: "var(--accent)" },
             { k: "fav", label: "♥ 즐겨찾기", color: "#E5484D" },
-            { k: "top", label: "⭐ 5점", color: "#D4AF37" },
-            { k: "rated4", label: "⭐ 4점+", color: "#D4AF37" },
-            { k: "tier0", label: "🟢 좋아함", color: "#22A06B" },
+            { k: "tier0", label: "😍 좋아함", color: "#22A06B" },
+            { k: "tier01", label: "🙂 좋아함 + 괜찮음", color: "#B89B4A" },
             { k: "wish", label: "🔖 아직 안 간 곳", color: "#C9A07A" },
             { k: "unrated", label: "❔ 평가 안 함", color: "#6B7280" },
           ] as { k: QualityFilter; label: string; color: string }[]).map((f) => (
@@ -541,7 +542,7 @@ export default function KakaoMap({ restaurants }: Props) {
         const left = `calc(${safeSide}px + (100% - ${safeSide + safeRight + chipW}px) * ${xProgress})`;
         const kmLabel = meters >= 1000 ? `${(meters / 1000).toFixed(1)}km` : `${Math.round(meters)}m`;
         const emoji = categoryStyle(r.category).emoji;
-        const color = r.is_favorite ? "#E5484D" : (r.rating ?? 0) >= 5 ? "#D4AF37" : "var(--accent)";
+        const color = r.is_favorite ? "#E5484D" : r.tier === 0 ? "#D4AF37" : "var(--accent)";
         return (
           <button
             key={r.id}
@@ -665,8 +666,13 @@ export default function KakaoMap({ restaurants }: Props) {
                     {categoryStyle(selected.category).emoji} {selected.category}
                   </span>
                 )}
-                {selected.rating != null && selected.rating > 0 && (
-                  <span style={{ color: "#FFD56B" }}>⭐ {selected.rating}</span>
+                {selected.tier != null && (
+                  <span
+                    className="px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(255,255,255,0.22)", backdropFilter: "blur(6px)" }}
+                  >
+                    {selected.tier === 0 ? "😍 좋아함" : selected.tier === 1 ? "🙂 괜찮음" : "😐 별로"}
+                  </span>
                 )}
                 {selected.is_favorite && <span style={{ color: "#FFA0A0" }}>♥</span>}
                 {selected.is_wishlist && <span style={{ color: "#E5C9A2" }}>🔖</span>}

@@ -74,7 +74,7 @@ export default async function PublicCollectionPage({ params }: Props) {
   const { data: items } = await admin
     .from("collection_items")
     .select(
-      "restaurant_id, order_index, restaurants!inner(id, name, category, address, rating, restaurant_images(storage_path, is_primary, blur_data_url))",
+      "restaurant_id, order_index, restaurants!inner(id, name, category, address, restaurant_images(storage_path, is_primary, blur_data_url))",
     )
     .eq("collection_id", collection.id)
     .order("order_index", { ascending: true });
@@ -86,11 +86,26 @@ export default async function PublicCollectionPage({ params }: Props) {
       name: string;
       category: string | null;
       address: string | null;
-      rating: number | null;
       restaurant_images: { storage_path: string; is_primary: boolean | null; blur_data_url: string | null }[];
     };
   };
   const rows = (items ?? []) as unknown as Row[];
+
+  // Owner의 tier — 컬렉션 내 가게들 한 번에
+  const restaurantIds = rows.map((r) => r.restaurant_id);
+  const { data: scoreRows } = restaurantIds.length
+    ? await admin
+        .from("restaurant_scores")
+        .select("restaurant_id, tier")
+        .eq("user_id", collection.owner_id)
+        .in("restaurant_id", restaurantIds)
+    : { data: [] };
+  const tierByRid = new Map<string, 0 | 1 | 2>();
+  for (const s of scoreRows ?? []) {
+    if (s.tier != null) tierByRid.set(s.restaurant_id, s.tier as 0 | 1 | 2);
+  }
+  const tierLabel = (t: 0 | 1 | 2 | null) =>
+    t === 0 ? "😍 좋아함" : t === 1 ? "🙂 괜찮음" : t === 2 ? "😐 별로" : null;
 
   return (
     <div className="min-h-screen pb-20" style={{ background: "var(--bg)" }}>
@@ -191,7 +206,10 @@ export default async function PublicCollectionPage({ params }: Props) {
                   <div className="font-display text-[17px] font-extrabold truncate">{r.name}</div>
                   <div className="text-[12px] mt-0.5" style={{ color: "var(--text-2)" }}>
                     {r.category ?? "기타"}
-                    {r.rating != null && <> · ⭐ {r.rating}</>}
+                    {(() => {
+                      const tl = tierLabel(tierByRid.get(it.restaurant_id) ?? null);
+                      return tl ? <> · {tl}</> : null;
+                    })()}
                   </div>
                   {r.address && (
                     <div className="text-[12px] mt-1 truncate" style={{ color: "var(--text-3)" }}>

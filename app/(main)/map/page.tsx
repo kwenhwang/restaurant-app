@@ -18,7 +18,7 @@ export default async function MapPage() {
     supabase
       .from("restaurants")
       .select(
-        "id, name, address, lat, lng, category, rating, is_favorite, phone, business_hours, note, menu, images:restaurant_images(storage_path, is_primary, blur_data_url)",
+        "id, name, address, lat, lng, category, is_favorite, phone, business_hours, note, menu, images:restaurant_images(storage_path, is_primary, blur_data_url)",
       )
       .eq("user_id", user!.id)
       .not("lat", "is", null),
@@ -79,7 +79,6 @@ export default async function MapPage() {
         lat: r.lat!,
         lng: r.lng!,
         category: r.category,
-        rating: r.rating,
         is_favorite: !!r.is_favorite,
         is_wishlist: wishIds.has(r.id),
         visit_count: agg?.count ?? 0,

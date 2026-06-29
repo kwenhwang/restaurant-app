@@ -4,7 +4,6 @@ import { AIBadRequest, createAIRoute } from "@/lib/ai/handler";
 interface ParseResult {
   name: string | null;
   category: string | null;
-  rating: number | null;
   memo: string | null;
 }
 
@@ -33,14 +32,12 @@ export const POST = createAIRoute<{ transcript: string }, ParseResult>({
 **추출 규칙:**
 - name: 식당 이름 (지역명 포함 가능, 예: "강남 본가", "성수 어니언"). 분명히 추출 가능하면, 아니면 null
 - category: 한식·중식·일식·양식·카페·술집·디저트·기타 중 하나, 모르겠으면 null
-- rating: 1~5 정수. "별 다섯", "5점", "최고", "별로" 등 표현에서 추론. 안 나오면 null
 - memo: 사용자의 감상·메뉴·분위기를 한 문장으로 정리 (60자 내외). 단순 사실만 있으면 null
 
 **출력 (JSON만):**
 {
   "name": <문자열|null>,
   "category": <문자열|null>,
-  "rating": <1~5|null>,
   "memo": <문자열|null>
 }`;
 
@@ -50,9 +47,6 @@ export const POST = createAIRoute<{ transcript: string }, ParseResult>({
     });
 
     if (result.category && !VALID_CATEGORIES.includes(result.category)) result.category = null;
-    if (result.rating !== null && (result.rating < 1 || result.rating > 5)) {
-      result.rating = null;
-    }
     return result;
   },
 });

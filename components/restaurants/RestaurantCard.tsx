@@ -7,11 +7,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import Sym from "@/components/ui/Sym";
-import Stars from "@/components/ui/Stars";
 import FavoriteButton from "@/components/restaurants/FavoriteButton";
 import CategoryPlaceholder from "@/components/restaurants/CategoryPlaceholder";
 import { categoryStyle } from "@/lib/category-icons";
 import { relativeTime } from "@/lib/relative-time";
+import { tierMeta, type Tier } from "@/lib/tier";
 
 const IMAGE_BASE = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 
@@ -20,7 +20,6 @@ type Restaurant = {
   id: string;
   name: string;
   category?: string | null;
-  rating?: number | null;
   address?: string | null;
   is_favorite?: boolean;
   images?: Img[];
@@ -29,6 +28,7 @@ type Restaurant = {
   tags?: string[];
   rank?: number;
   rankTotal?: number;
+  tier?: Tier;
 };
 
 function imageUrl(path: string) {
@@ -92,16 +92,24 @@ export default function RestaurantCard({ restaurant }: { restaurant: Restaurant 
           />
         </div>
 
-        {/* score */}
-        <div
-          className="absolute left-3 bottom-3 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[12px]"
-          style={{ background: "rgba(20,16,12,0.55)", backdropFilter: "blur(10px)", color: "#fff" }}
-        >
-          <Sym name="star.fill" size={12} className="text-accent" />
-          <span className="font-extrabold text-[14px] tabular-nums">
-            {restaurant.rating ? restaurant.rating.toFixed(1) : "—"}
-          </span>
-        </div>
+        {/* tier badge (대결 평가 결과) */}
+        {(() => {
+          const tm = tierMeta(restaurant.tier);
+          if (!tm) return null;
+          return (
+            <div
+              className="absolute left-3 bottom-3 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[12px] font-extrabold text-[12px]"
+              style={{
+                background: "rgba(20,16,12,0.55)",
+                backdropFilter: "blur(10px)",
+                color: "#fff",
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{tm.emoji}</span>
+              {tm.label}
+            </div>
+          );
+        })()}
       </div>
 
       {/* META */}
@@ -110,7 +118,6 @@ export default function RestaurantCard({ restaurant }: { restaurant: Restaurant 
           <h3 className="font-display text-[19px] font-extrabold truncate" style={{ letterSpacing: "-0.3px" }}>
             {restaurant.name}
           </h3>
-          <Stars value={restaurant.rating ?? 0} size={12} />
         </div>
 
         <div className="flex items-center gap-2 mt-2 flex-wrap">

@@ -9,10 +9,10 @@ export const GET = createAIRoute<null, { text: string }>({
   perMinute: 10,
   perDay: 100,
   handler: async ({ supabase, user }) => {
-    const [{ data: restaurants }, { data: visits }] = await Promise.all([
+    const [{ data: restaurants }, { data: visits }, { data: scores }] = await Promise.all([
       supabase
         .from("restaurants")
-        .select("id, name, category, rating, is_favorite")
+        .select("id, name, category, is_favorite")
         .eq("user_id", user.id),
       supabase
         .from("visits")
@@ -20,6 +20,10 @@ export const GET = createAIRoute<null, { text: string }>({
         .eq("user_id", user.id)
         .order("visited_at", { ascending: false })
         .limit(500),
+      supabase
+        .from("restaurant_scores")
+        .select("restaurant_id, tier")
+        .eq("user_id", user.id),
     ]);
 
     if (!visits || visits.length === 0) {
@@ -60,17 +64,20 @@ export const GET = createAIRoute<null, { text: string }>({
       count: byDay.get(String(d)) ?? 0,
     }));
 
-    const ratedRestaurants = (restaurants ?? []).filter((r) => r.rating);
+    const tierCount = { loved: 0, ok: 0, meh: 0 };
+    for (const s of scores ?? []) {
+      if (s.tier === 0) tierCount.loved += 1;
+      else if (s.tier === 1) tierCount.ok += 1;
+      else if (s.tier === 2) tierCount.meh += 1;
+    }
     const summary = {
       total_visits: visits.length,
       total_restaurants: restaurants?.length ?? 0,
       favorites: (restaurants ?? []).filter((r) => r.is_favorite).length,
-      avg_rating:
-        ratedRestaurants.length > 0
-          ? (
-              ratedRestaurants.reduce((s, r) => s + (r.rating ?? 0), 0) / ratedRestaurants.length
-            ).toFixed(1)
-          : "0",
+      evaluated: tierCount.loved + tierCount.ok + tierCount.meh,
+      loved: tierCount.loved,
+      ok: tierCount.ok,
+      meh: tierCount.meh,
       top_categories: topCats.map(([c, n]) => ({ category: c, visits: n })),
       top_restaurants: topRestaurants,
       monthly_visits: last6Months.map(([m, n]) => ({ month: m, count: n })),

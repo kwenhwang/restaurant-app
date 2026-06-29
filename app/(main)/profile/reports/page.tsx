@@ -13,24 +13,37 @@ export default async function ReportsIndexPage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [{ data: restaurants }, { data: visits }] = await Promise.all([
+  const [{ data: restaurants }, { data: visits }, { data: scores }] = await Promise.all([
     supabase
       .from("restaurants")
-      .select("id, name, category, address, rating, created_at")
+      .select("id, name, category, address, created_at")
       .eq("user_id", user.id),
     supabase
       .from("visits")
       .select("restaurant_id, visited_at")
       .eq("user_id", user.id),
+    supabase
+      .from("restaurant_scores")
+      .select("restaurant_id, tier")
+      .eq("user_id", user.id),
   ]);
 
-  const months = activeMonths(visits ?? [], restaurants ?? []);
+  const tierByRid = new Map<string, 0 | 1 | 2>();
+  for (const s of scores ?? []) {
+    if (s.tier != null) tierByRid.set(s.restaurant_id, s.tier as 0 | 1 | 2);
+  }
+  const decoratedRestaurants = (restaurants ?? []).map((r) => ({
+    ...r,
+    tier: tierByRid.get(r.id) ?? null,
+  }));
+
+  const months = activeMonths(visits ?? [], decoratedRestaurants);
 
   // Pre-compute a summary line per month so the index feels alive.
   const summaries = months.slice(0, 24).map((yyyymm) => {
     const report = buildMonthlyReport({
       yyyymm,
-      restaurants: restaurants ?? [],
+      restaurants: decoratedRestaurants,
       visits: visits ?? [],
     });
     return { yyyymm, label: yyyymm.replace("-", "년 ") + "월", report };

@@ -25,7 +25,6 @@ interface Parsed {
   name: string | null;
   address: string | null;
   category: string | null;
-  rating: number | null;
 }
 
 const HOSTS_TIPS: Record<string, string> = {
@@ -151,7 +150,6 @@ export default function ImportFromUrl() {
           lat,
           lng,
           category: parsed.category,
-          rating: parsed.rating,
           note: note.trim() || null,
         })
         .select("id")
@@ -271,7 +269,6 @@ export default function ImportFromUrl() {
                     name: e.target.value,
                     address: p?.address ?? null,
                     category: p?.category ?? null,
-                    rating: p?.rating ?? null,
                   }))
                 }
                 placeholder={parsing ? "분석 중…" : "AI가 찾지 못함 — 직접 입력"}
@@ -294,7 +291,6 @@ export default function ImportFromUrl() {
                     name: p?.name ?? null,
                     address: e.target.value,
                     category: p?.category ?? null,
-                    rating: p?.rating ?? null,
                   }))
                 }
                 placeholder={parsing ? "분석 중…" : "주소 (선택)"}
@@ -302,61 +298,31 @@ export default function ImportFromUrl() {
               />
             </div>
 
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label
-                  className="text-[11px] font-bold uppercase tracking-wider"
-                  style={{ color: "var(--text-2)" }}
-                >
-                  카테고리
-                </label>
-                <select
-                  value={parsed?.category ?? ""}
-                  onChange={(e) =>
-                    setParsed((p) => ({
-                      name: p?.name ?? null,
-                      address: p?.address ?? null,
-                      category: e.target.value || null,
-                      rating: p?.rating ?? null,
-                    }))
-                  }
-                  className="w-full mt-1 bg-transparent border-0 outline-none text-[15px]"
-                >
-                  <option value="">선택…</option>
-                  {["한식", "중식", "일식", "양식", "카페", "술집", "디저트", "기타"].map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex-1">
-                <label
-                  className="text-[11px] font-bold uppercase tracking-wider"
-                  style={{ color: "var(--text-2)" }}
-                >
-                  별점
-                </label>
-                <select
-                  value={parsed?.rating ?? ""}
-                  onChange={(e) =>
-                    setParsed((p) => ({
-                      name: p?.name ?? null,
-                      address: p?.address ?? null,
-                      category: p?.category ?? null,
-                      rating: e.target.value ? parseInt(e.target.value, 10) : null,
-                    }))
-                  }
-                  className="w-full mt-1 bg-transparent border-0 outline-none text-[15px]"
-                >
-                  <option value="">—</option>
-                  {[5, 4, 3, 2, 1].map((n) => (
-                    <option key={n} value={n}>
-                      {"⭐".repeat(n)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label
+                className="text-[11px] font-bold uppercase tracking-wider"
+                style={{ color: "var(--text-2)" }}
+              >
+                카테고리
+              </label>
+              <select
+                value={parsed?.category ?? ""}
+                onChange={(e) =>
+                  setParsed((p) => ({
+                    name: p?.name ?? null,
+                    address: p?.address ?? null,
+                    category: e.target.value || null,
+                  }))
+                }
+                className="w-full mt-1 bg-transparent border-0 outline-none text-[15px]"
+              >
+                <option value="">선택…</option>
+                {["한식", "중식", "일식", "양식", "카페", "술집", "디저트", "기타"].map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

@@ -83,36 +83,19 @@ export default function RestaurantForm({ action, restaurant }: Props) {
           so duplicate keys in FormData are harmless. */}
       <input type="hidden" name="name" value={name} />
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl px-4 py-2.5" style={{ background: "var(--bg)" }}>
-          <div className="text-[11px] font-semibold tracking-wide" style={{ color: "var(--text-2)" }}>카테고리</div>
-          <select
-            name="category"
-            defaultValue={restaurant?.category ?? ""}
-            className="w-full bg-transparent outline-none text-[15px] mt-0.5"
-            style={{ color: "var(--text)" }}
-          >
-            <option value="">선택</option>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="rounded-2xl px-4 py-2.5" style={{ background: "var(--bg)" }}>
-          <div className="text-[11px] font-semibold tracking-wide" style={{ color: "var(--text-2)" }}>평점</div>
-          <select
-            name="rating"
-            defaultValue={restaurant?.rating?.toString() ?? ""}
-            className="w-full bg-transparent outline-none text-[15px] mt-0.5"
-            style={{ color: "var(--text)" }}
-          >
-            <option value="">선택</option>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <option key={n} value={n}>{"★".repeat(n)} {n}점</option>
-            ))}
-          </select>
-        </div>
+      <div className="rounded-2xl px-4 py-2.5" style={{ background: "var(--bg)" }}>
+        <div className="text-[11px] font-semibold tracking-wide" style={{ color: "var(--text-2)" }}>카테고리</div>
+        <select
+          name="category"
+          defaultValue={restaurant?.category ?? ""}
+          className="w-full bg-transparent outline-none text-[15px] mt-0.5"
+          style={{ color: "var(--text)" }}
+        >
+          <option value="">선택</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       <div className="rounded-2xl px-4 py-2.5" style={{ background: "var(--bg)" }}>

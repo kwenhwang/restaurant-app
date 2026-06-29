@@ -84,7 +84,7 @@ export default function HomeSections({
               <RestaurantMiniCard
                 key={r.id}
                 restaurant={r}
-                sub={`${r.rating ? `★ ${r.rating}.0` : ""} · ${r.category ?? ""}`}
+                sub={r.category ?? ""}
               />
             ))}
           </Rail>

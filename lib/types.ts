@@ -33,7 +33,6 @@ export interface Restaurant {
   lat: number | null;
   lng: number | null;
   category: Category | null;
-  rating: number | null;
   note: string | null;
   is_favorite: boolean;
   created_at: string;

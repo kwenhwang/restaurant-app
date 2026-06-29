@@ -1,31 +1,37 @@
 // lib/rankings.ts
-// Compute per-restaurant score and rank.
+// 별점 폐지 후 — Elo가 1차 신호, tier가 2차 fallback, 방문 횟수가 약한 보너스.
 //
-//   score = rating × 20 + min(visit_count, 10) × 2
+//   score = tierWeight × 20 + min(visit_count, 10) × 2
 //
-// Rating dominates (max 100). Frequent visits cap at 20 to reward "safe
-// staple" without letting them outrank higher-rated newer finds.
+//   tierWeight: 좋아함 0 → 5, 괜찮음 1 → 3, 별로 2 → 1, 평가 전 → 2.5
 //
-// Tiebreaker order: score desc → visit_count desc → created_at asc.
+// Elo가 있으면 무조건 그 순서. Elo 없는 가게만 score로 폴백.
+// Tiebreaker: score desc → visit_count desc → created_at asc.
+
+export type Tier = 0 | 1 | 2 | null | undefined;
 
 export interface Rankable {
   id: string;
-  rating: number | null;
+  tier?: Tier;
   visit_count: number;
   created_at?: string | null;
 }
 
-export function score(r: { rating: number | null; visit_count: number }): number {
-  const rating = r.rating ?? 0;
+function tierWeight(t: Tier): number {
+  if (t == null) return 2.5;
+  if (t === 0) return 5;
+  if (t === 1) return 3;
+  return 1; // tier 2 별로
+}
+
+export function score(r: { tier?: Tier; visit_count: number }): number {
   const visits = Math.min(r.visit_count ?? 0, 10);
-  return rating * 20 + visits * 2;
+  return tierWeight(r.tier) * 20 + visits * 2;
 }
 
 /**
  * Elo-aware ranking: rows with an entry in `eloMap` sort first (by Elo desc),
- * then any score-less rows fall back to the legacy formula. Used wherever
- * we need a consistent rank across the user's restaurants since the
- * pairwise system was introduced.
+ * then any score-less rows fall back to the tier-based formula.
  */
 export function rankAllByElo(
   restaurants: Rankable[],

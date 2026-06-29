@@ -36,16 +36,29 @@ export default async function ProfilePage() {
 
   const premium = user ? await getPremiumStatus(supabase, user.id) : null;
 
-  const [{ data: restaurants }, { data: visits }] = await Promise.all([
+  const [{ data: restaurants }, { data: visits }, { data: scores }] = await Promise.all([
     supabase
       .from("restaurants")
-      .select("id, name, category, rating, is_favorite")
+      .select("id, name, category, is_favorite")
       .eq("user_id", user!.id),
     supabase
       .from("visits")
       .select("visited_at, restaurant_id")
       .eq("user_id", user!.id),
+    supabase
+      .from("restaurant_scores")
+      .select("restaurant_id, tier")
+      .eq("user_id", user!.id),
   ]);
+
+  const tierByRid = new Map<string, 0 | 1 | 2>();
+  for (const s of scores ?? []) {
+    if (s.tier != null) tierByRid.set(s.restaurant_id, s.tier as 0 | 1 | 2);
+  }
+  const decoratedRestaurants = (restaurants ?? []).map((r) => ({
+    ...r,
+    tier: tierByRid.get(r.id) ?? null,
+  }));
 
   const email = user?.email ?? "";
   const initial = (email[0] ?? "나").toUpperCase();
@@ -80,7 +93,7 @@ export default async function ProfilePage() {
       </div>
 
       <div className="pt-4">
-        <Stats restaurants={restaurants ?? []} visits={visits ?? []} />
+        <Stats restaurants={decoratedRestaurants} visits={visits ?? []} />
       </div>
 
       <div className="pt-1">
@@ -89,7 +102,18 @@ export default async function ProfilePage() {
 
       <Sec title="나의 큐레이션">
         <Group>
-          <Link href="/collections" className="flex items-center justify-between px-4 h-[52px]">
+          <Link
+            href="/visits"
+            className="flex items-center justify-between px-4 h-[52px]"
+          >
+            <span className="text-[15px]">방문 기록</span>
+            <span style={{ color: "var(--text-3)", fontSize: 16 }}>›</span>
+          </Link>
+          <Link
+            href="/collections"
+            className="flex items-center justify-between px-4 h-[52px]"
+            style={{ borderTop: "0.5px solid var(--separator)" }}
+          >
             <span className="text-[15px]">컬렉션</span>
             <span style={{ color: "var(--text-3)", fontSize: 16 }}>›</span>
           </Link>

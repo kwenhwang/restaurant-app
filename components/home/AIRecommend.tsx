@@ -33,7 +33,7 @@ interface RestaurantLite {
   id: string;
   name: string;
   category?: string | null;
-  rating?: number | null;
+  tier?: 0 | 1 | 2 | null;
   images?: Image[];
 }
 interface Props {
@@ -233,10 +233,14 @@ function HeroCard({ r, reason, q }: { r: RestaurantLite; reason: string; q: stri
         <span className="px-3 py-1.5 rounded-full text-[12px] font-semibold text-white" style={{ background: "rgba(20,16,12,0.42)", backdropFilter: "blur(8px)" }}>
           {q}
         </span>
-        <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[12px] text-white" style={{ background: "rgba(20,16,12,0.55)", backdropFilter: "blur(10px)" }}>
-          <Sym name="star.fill" size={12} className="text-accent" />
-          <span className="font-extrabold text-[14px] tabular-nums">{r.rating ? r.rating.toFixed(1) : "—"}</span>
-        </span>
+        {r.tier != null && (
+          <span
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[12px] text-white text-[12px] font-extrabold"
+            style={{ background: "rgba(20,16,12,0.55)", backdropFilter: "blur(10px)" }}
+          >
+            {r.tier === 0 ? "😍 좋아함" : r.tier === 1 ? "🙂 괜찮음" : "😐 별로"}
+          </span>
+        )}
       </div>
       <div className="absolute left-4 right-4 bottom-4 text-white">
         <span className="inline-block px-2.5 py-1 rounded-full text-[11.5px] font-bold mb-2" style={{ background: "rgba(255,255,255,0.22)", backdropFilter: "blur(6px)" }}>

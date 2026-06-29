@@ -21,7 +21,6 @@ export interface RestaurantItem {
   name: string;
   address?: string | null;
   category?: string | null;
-  rating?: number | null;
   is_favorite?: boolean;
   created_at?: string;
   note?: string | null;
@@ -30,6 +29,8 @@ export interface RestaurantItem {
   last_visit?: string | null;
   tags?: string[];
   rank?: number;
+  tier?: 0 | 1 | 2 | null;
+  elo?: number | null;
 }
 
 interface Props {
@@ -38,12 +39,12 @@ interface Props {
   popularTags?: string[];
 }
 
-type Sort = "recent" | "rating" | "name" | "rank" | "visits";
+type Sort = "recent" | "tier" | "name" | "rank" | "visits";
 
 const SORT_LABEL: Record<Sort, string> = {
   rank: "순위",
   recent: "최신순",
-  rating: "평점순",
+  tier: "좋아한 순",
   visits: "방문순",
   name: "이름순",
 };
@@ -77,7 +78,15 @@ export default function HomeFilters({ restaurants, categories, popularTags = [] 
     }
     const sorted = [...list];
     if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name, "ko"));
-    else if (sort === "rating") sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    else if (sort === "tier") {
+      // tier 0(좋아함) → 1(괜찮음) → 2(별로) → 평가 전. Tie-break: elo desc.
+      sorted.sort((a, b) => {
+        const at = a.tier == null ? 1.5 : a.tier;
+        const bt = b.tier == null ? 1.5 : b.tier;
+        if (at !== bt) return at - bt;
+        return (b.elo ?? 0) - (a.elo ?? 0);
+      });
+    }
     else if (sort === "visits") sorted.sort((a, b) => (b.visit_count ?? 0) - (a.visit_count ?? 0));
     else if (sort === "rank") sorted.sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity));
     else sorted.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));

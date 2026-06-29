@@ -16,26 +16,26 @@ const old = "2026-04-01"; // ~75 days before
 const recent = "2026-06-10"; // 5 days before
 
 describe("revisit — gating", () => {
-  it("requires favorite OR rating >= 4", () => {
+  it("requires favorite OR tier 0 (좋아함)", () => {
     const out = pickRevisitCandidates(
       [
-        { id: "low", name: "A", rating: 3, last_visit: old },
-        { id: "fav", name: "B", rating: 2, is_favorite: true, last_visit: old },
-        { id: "high", name: "C", rating: 4, last_visit: old },
+        { id: "mid", name: "A", tier: 1, last_visit: old },
+        { id: "fav", name: "B", tier: 2, is_favorite: true, last_visit: old },
+        { id: "love", name: "C", tier: 0, last_visit: old },
       ],
       5,
     );
     const ids = out.map((c) => c.id);
-    expect(ids).not.toContain("low");
+    expect(ids).not.toContain("mid");
     expect(ids).toContain("fav");
-    expect(ids).toContain("high");
+    expect(ids).toContain("love");
   });
 
   it("must be 30+ days since last visit", () => {
     const out = pickRevisitCandidates(
       [
-        { id: "fresh", name: "A", rating: 5, last_visit: recent },
-        { id: "stale", name: "B", rating: 5, last_visit: old },
+        { id: "fresh", name: "A", tier: 0, last_visit: recent },
+        { id: "stale", name: "B", tier: 0, last_visit: old },
       ],
       5,
     );
@@ -44,11 +44,11 @@ describe("revisit — gating", () => {
 });
 
 describe("revisit — scoring", () => {
-  it("favorite + 5★ + months-ago wins over plain 4★", () => {
+  it("favorite + tier 0 + months-ago wins over plain tier 0", () => {
     const out = pickRevisitCandidates(
       [
-        { id: "elite", name: "A", rating: 5, is_favorite: true, last_visit: old },
-        { id: "plain", name: "B", rating: 4, last_visit: old },
+        { id: "elite", name: "A", tier: 0, is_favorite: true, last_visit: old },
+        { id: "plain", name: "B", tier: 0, last_visit: old },
       ],
       5,
     );
@@ -57,7 +57,7 @@ describe("revisit — scoring", () => {
 
   it("never-visited treated as 60 days (threshold met)", () => {
     const out = pickRevisitCandidates(
-      [{ id: "never", name: "A", rating: 5, last_visit: null }],
+      [{ id: "never", name: "A", tier: 0, last_visit: null }],
       5,
     );
     expect(out).toHaveLength(1);
@@ -68,7 +68,7 @@ describe("revisit — scoring", () => {
 describe("revisit — wishlist", () => {
   it("wishlist + never visited becomes candidate immediately (no 30-day wait)", () => {
     const out = pickRevisitCandidates(
-      [{ id: "w", name: "찜집", rating: null, is_wishlist: true, last_visit: null }],
+      [{ id: "w", name: "찜집", tier: null, is_wishlist: true, last_visit: null }],
       5,
     );
     expect(out).toHaveLength(1);
@@ -76,24 +76,24 @@ describe("revisit — wishlist", () => {
     expect(out[0].days_since).toBe(9999);
   });
 
-  it("wishlist scores between favorite and rating", () => {
+  it("wishlist scores between favorite and plain tier 0", () => {
     const out = pickRevisitCandidates(
       [
-        { id: "fav", name: "F", rating: 4, is_favorite: true, last_visit: old },
-        { id: "wish", name: "W", rating: null, is_wishlist: true, last_visit: null },
-        { id: "rate", name: "R", rating: 4, last_visit: old },
+        { id: "fav", name: "F", tier: 0, is_favorite: true, last_visit: old },
+        { id: "wish", name: "W", tier: null, is_wishlist: true, last_visit: null },
+        { id: "rate", name: "R", tier: 0, last_visit: old },
       ],
       5,
     );
-    // Favorite (60 + 25 + age) beats wish (45 + 24 cap). Wish beats plain rating.
+    // Favorite (60 + 35 + age) beats wish (45 + 24 cap). Wish beats plain tier 0.
     const ids = out.map((c) => c.id);
     expect(ids[0]).toBe("fav");
     expect(ids).toContain("wish");
   });
 
-  it("non-wishlist non-favorite low rating excluded", () => {
+  it("non-wishlist non-favorite non-loved excluded", () => {
     const out = pickRevisitCandidates(
-      [{ id: "low", name: "L", rating: 2, last_visit: old }],
+      [{ id: "mid", name: "L", tier: 1, last_visit: old }],
       5,
     );
     expect(out).toHaveLength(0);
@@ -105,7 +105,7 @@ describe("revisit — limit", () => {
     const rs = Array.from({ length: 10 }, (_, i) => ({
       id: `${i}`,
       name: `R${i}`,
-      rating: 5,
+      tier: 0 as const,
       last_visit: old,
     }));
     expect(pickRevisitCandidates(rs, 3)).toHaveLength(3);

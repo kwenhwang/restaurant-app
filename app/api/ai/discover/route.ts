@@ -42,24 +42,36 @@ export const GET = createAIRoute<null, ResponseShape>({
     const userLng = parseFloat(sp.get("lng") ?? "");
     const hasCoord = isFinite(userLat) && isFinite(userLng);
 
+    // 즐겨찾기 OR tier 0/1(좋아함·괜찮음) 가게를 취향 시드로 사용
+    const { data: scoresForTop } = await supabase
+      .from("restaurant_scores")
+      .select("restaurant_id, tier, elo")
+      .eq("user_id", user.id)
+      .in("tier", [0, 1]);
+    const tierRids = (scoresForTop ?? []).map((s) => s.restaurant_id);
+
+    const orParts = ["is_favorite.eq.true"];
+    if (tierRids.length) orParts.push(`id.in.(${tierRids.join(",")})`);
+
     const { data: top } = await supabase
       .from("restaurants")
-      .select("name, category, rating, is_favorite, address")
+      .select("id, name, category, is_favorite, address")
       .eq("user_id", user.id)
-      .or("rating.gte.4,is_favorite.eq.true")
-      .order("is_favorite", { ascending: false })
-      .order("rating", { ascending: false })
+      .or(orParts.join(","))
       .limit(10);
 
     if (!top || top.length < 3) {
       return NextResponse.json(
         {
-          error: "맛집을 3곳 이상 등록하고 별점을 매겨주세요. 더 정확한 추천을 드릴 수 있어요.",
+          error: "맛집을 3곳 이상 등록하고 대결 평가를 해주세요. 더 정확한 추천을 드릴 수 있어요.",
           code: "NEED_MORE_DATA",
         },
         { status: 400 },
       );
     }
+
+    const tierByRid = new Map<string, number>();
+    for (const s of scoresForTop ?? []) tierByRid.set(s.restaurant_id, s.tier);
 
     const areaMap = new Map<string, number>();
     for (const r of top) {
@@ -75,10 +87,17 @@ export const GET = createAIRoute<null, ResponseShape>({
     const topCats = [...catMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c]) => c);
 
     const tasteLines = top
-      .map(
-        (r) =>
-          `- ${r.name}${r.category ? ` (${r.category})` : ""}${r.is_favorite ? " ⭐즐겨찾기" : r.rating ? ` ${r.rating}점` : ""}`,
-      )
+      .map((r) => {
+        const t = tierByRid.get(r.id);
+        const tag = r.is_favorite
+          ? " ♥즐겨찾기"
+          : t === 0
+            ? " 😍좋아함"
+            : t === 1
+              ? " 🙂괜찮음"
+              : "";
+        return `- ${r.name}${r.category ? ` (${r.category})` : ""}${tag}`;
+      })
       .join("\n");
 
     const locationLine = hasCoord

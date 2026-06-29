@@ -11,7 +11,6 @@ import AIRecommend from "@/components/home/AIRecommend";
 import AIDiscover from "@/components/home/AIDiscover";
 import FriendCollectionsSection from "@/components/home/FriendCollectionsSection";
 import MonthlyReportBanner from "@/components/home/MonthlyReportBanner";
-import QuickWishButton from "@/components/home/QuickWishButton";
 import { buildMonthlyReport } from "@/lib/monthly-report";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import RevisitNudge from "@/components/home/RevisitNudge";
@@ -41,7 +40,7 @@ export default async function HomePage() {
     supabase
       .from("restaurants")
       .select(
-        "id, name, address, category, rating, is_favorite, note, created_at, images:restaurant_images(id, storage_path, is_primary, blur_data_url)",
+        "id, name, address, category, is_favorite, note, created_at, images:restaurant_images(id, storage_path, is_primary, blur_data_url)",
       )
       .eq("user_id", user!.id)
       .order("created_at", { ascending: false }),
@@ -62,7 +61,7 @@ export default async function HomePage() {
       .maybeSingle(),
     supabase
       .from("restaurant_scores")
-      .select("restaurant_id, elo")
+      .select("restaurant_id, elo, tier")
       .eq("user_id", user!.id),
   ]);
 
@@ -110,19 +109,28 @@ export default async function HomePage() {
     (wishItemsData as { collection_items?: { restaurant_id: string }[] } | null)?.collection_items ?? [];
   for (const it of wishItems) wishlistIds.add(it.restaurant_id);
 
+  const eloMap = new Map<string, number>();
+  const tierMap = new Map<string, 0 | 1 | 2>();
+  for (const s of scoreRows ?? []) {
+    eloMap.set(s.restaurant_id, s.elo);
+    if (s.tier != null) tierMap.set(s.restaurant_id, s.tier as 0 | 1 | 2);
+  }
+
   const decorated = restaurants.map((r) => ({
     ...r,
     visit_count: visitMap.get(r.id)?.count ?? 0,
     last_visit: visitMap.get(r.id)?.last || null,
     tags: tagMap.get(r.id) ?? [],
     is_wishlist: wishlistIds.has(r.id),
+    tier: tierMap.get(r.id) ?? null,
   }));
 
-  const eloMap = new Map<string, number>();
-  for (const s of scoreRows ?? []) eloMap.set(s.restaurant_id, s.elo);
-
   const rankMap = rankAllByElo(decorated, eloMap);
-  const list = decorated.map((r) => ({ ...r, rank: rankMap.get(r.id) }));
+  const list = decorated.map((r) => ({
+    ...r,
+    rank: rankMap.get(r.id),
+    elo: eloMap.get(r.id) ?? null,
+  }));
 
   const count = list.length;
   const now = new Date();
@@ -155,17 +163,14 @@ export default async function HomePage() {
         title="내 맛집"
         meta={`총 ${count}곳 · 이번 달 +${thisMonth}`}
         trailing={
-          <div className="flex items-center gap-2">
-            <QuickWishButton />
-            <Link
-              href="/profile"
-              aria-label="프로필"
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: "var(--surface)", boxShadow: "var(--shadow-1)" }}
-            >
-              <Sym name="sparkles" size={18} />
-            </Link>
-          </div>
+          <Link
+            href="/profile"
+            aria-label="프로필"
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ background: "var(--surface)", boxShadow: "var(--shadow-1)" }}
+          >
+            <Sym name="sparkles" size={18} />
+          </Link>
         }
       />
 
@@ -185,7 +190,7 @@ export default async function HomePage() {
             name: r.name,
             category: r.category ?? null,
             address: r.address ?? null,
-            rating: r.rating ?? null,
+            tier: r.tier ?? null,
             created_at: r.created_at ?? null,
           })),
           visits: (visitsData ?? []).map((v) => ({
@@ -208,7 +213,7 @@ export default async function HomePage() {
           id: r.id,
           name: r.name,
           category: r.category,
-          rating: r.rating,
+          tier: r.tier,
           images: r.images,
         }))}
       />

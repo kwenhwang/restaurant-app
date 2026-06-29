@@ -35,10 +35,10 @@ export const GET = createAIRoute<null, AIResult>({
     const userLng = parseFloat(sp.get("lng") ?? "");
     const hasCoord = isFinite(userLat) && isFinite(userLng);
 
-    const [{ data: restaurants }, { data: visits }] = await Promise.all([
+    const [{ data: restaurants }, { data: visits }, { data: scores }] = await Promise.all([
       supabase
         .from("restaurants")
-        .select("id, name, category, rating, is_favorite, note, address, lat, lng")
+        .select("id, name, category, is_favorite, note, address, lat, lng")
         .eq("user_id", user.id),
       supabase
         .from("visits")
@@ -46,7 +46,15 @@ export const GET = createAIRoute<null, AIResult>({
         .eq("user_id", user.id)
         .order("visited_at", { ascending: false })
         .limit(200),
+      supabase
+        .from("restaurant_scores")
+        .select("restaurant_id, tier")
+        .eq("user_id", user.id),
     ]);
+    const tierByRid = new Map<string, number>();
+    for (const s of scores ?? []) {
+      if (s.tier != null) tierByRid.set(s.restaurant_id, s.tier);
+    }
 
     if (!restaurants || restaurants.length === 0) {
       return {
@@ -77,7 +85,7 @@ export const GET = createAIRoute<null, AIResult>({
         id: r.id,
         name: r.name,
         category: r.category ?? "기타",
-        rating: r.rating ?? null,
+        tier: tierByRid.get(r.id) ?? null,
         favorite: !!r.is_favorite,
         note: r.note ?? "",
         address: r.address ?? "",
@@ -134,7 +142,7 @@ ${distanceInstruction}
 **그 외 추천 기준:**
 1. 거리 가까움 우선 (좌표 있을 때)
 2. 마지막 방문 후 텀 충분 (days_since_last_visit 큰 곳 가산점, 단 0일은 방금 갔으니 X)
-3. 즐겨찾기·평점 높음
+3. 즐겨찾기·tier(0=좋아함, 1=괜찮음, 2=별로) 우선 — tier 2는 지양
 4. 같은 카테고리 연속 추천 X
 
 **맛집 목록 (JSON):**

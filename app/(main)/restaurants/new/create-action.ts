@@ -29,9 +29,6 @@ export async function createRestaurant(
       lat: formData.get("lat") ? parseFloat(formData.get("lat") as string) : null,
       lng: formData.get("lng") ? parseFloat(formData.get("lng") as string) : null,
       category: (formData.get("category") as string) || null,
-      rating: formData.get("rating")
-        ? parseInt(formData.get("rating") as string)
-        : null,
       note: (formData.get("note") as string) || null,
     })
     .select("id")

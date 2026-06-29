@@ -9,7 +9,6 @@ interface Parsed {
   name: string | null;
   address: string | null;
   category: string | null;
-  rating: number | null;
 }
 
 export default function ShareReceiveClient({ initialText }: { initialText: string }) {
@@ -91,7 +90,6 @@ export default function ShareReceiveClient({ initialText }: { initialText: strin
           lat,
           lng,
           category: parsed.category,
-          rating: parsed.rating,
           note: null,
         })
         .select("id")
@@ -199,10 +197,6 @@ export default function ShareReceiveClient({ initialText }: { initialText: strin
             <Field label="이름" value={parsed.name ?? "—"} />
             <Field label="주소" value={parsed.address ?? "—"} />
             <Field label="카테고리" value={parsed.category ?? "—"} />
-            <Field
-              label="평점"
-              value={parsed.rating ? "★".repeat(parsed.rating) : "—"}
-            />
           </div>
         )}
 
